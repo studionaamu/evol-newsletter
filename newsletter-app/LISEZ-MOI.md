@@ -4,7 +4,7 @@ Un seul fichier : **`index.html`**. Double-cliquez dessus : il s'ouvre dans votr
 
 ## 1. Écrire la newsletter
 
-- **Colonne de gauche** : tous les textes, classés en 7 panneaux (image d'en-tête, titre, introduction, blocs 01/02, signature, pied de page).
+- **Colonne de gauche** : tous les textes, classés en 9 panneaux (image d'en-tête, titre, introduction, blocs 01/02, blocs dynamiques, signature, apparence, options).
 - Tout est **enregistré automatiquement** dans le navigateur (« Enregistré » en haut).
 - **Mise en forme** dans les zones de texte :
   - `**texte en gras**` → **texte en gras**
@@ -47,6 +47,33 @@ Panneau **07 — Personnalisation avancée** : cochez la case et chaque contact 
 - **Sauvegarde** (en haut) : télécharge un fichier `.json` de votre brouillon — à conserver ou à transmettre à un collègue.
 - **Importer** : recharge un `.json` sauvegardé.
 - **Exporter l'e-mail** : télécharge le HTML final, importable dans Brevo, Mailchimp, Gmail (via un outil comme « Templates ») ou tout autre outil d'envoi — utile si vous préférez passer par un autre service.
+
+## Les blocs dynamiques (panneau 06)
+
+Certaines éditions demandent d'annoncer un événement, lister des dates ou célébrer une réussite. Le panneau **06 — Les blocs dynamiques** permet d'ajouter autant de blocs que nécessaire, dans l'ordre voulu :
+
+- **+ Événement** — titre, détails, photo à côté du texte, bouton de réservation optionnel.
+- **+ Dates importantes** — une liste épurée « Date | description » (une ligne par date).
+- **+ Win (photo / vidéo)** — un encadré doux pour célébrer une réussite, avec photo ou vidéo.
+- **+ Paragraphe** — du texte libre, avec photo ou vidéo si besoin.
+
+Chaque bloc se déplace (↑ ↓), se déplie en cliquant sur son en-tête et se supprime (✕). Tout est enregistré automatiquement.
+
+**Photos et vidéos** :
+- **Photo** : collez l'adresse (URL) d'une image en ligne (voir §2 pour l'héberger).
+- **Vidéo YouTube / Vimeo** : collez simplement le lien de la vidéo — les e-mails ne peuvent pas lire de vidéo directement, donc l'outil insère automatiquement **la miniature de la vidéo avec un bouton de lecture** : le destinataire clique et la vidéo s'ouvre.
+
+Les blocs sont insérés dans la lettre **après le bloc 01**, dans l'ordre affiché. Un bloc laissé vide n'apparaît pas dans l'e-mail : vous n'utilisez que ce dont l'édition a besoin.
+
+## Les ambiances de couleur (panneau 08)
+
+- **Nuit épurée** — noir profond neutre, textes clairs.
+- **Ardoise** — gris-bleu profond et doux.
+- **Ivoire** — clair et chaleureux.
+- **Craie** — blanc pur, sobre.
+- **Personnalisé** — la couleur de votre choix via la pastille de couleur.
+
+Sur les thèmes clairs (Ivoire, Craie, personnalisé clair), le texte au-dessus de la photo reste **blanc** et le voile devient **sombre et discret** : le titre reste lisible même sur une photo sombre, tandis que la lettre garde des textes foncés très confortables à lire. La photo et le fond s'étendent sur toute la largeur de l'e-mail — aucune barre latérale. L'arrondi du bouton se règle au curseur (0 à 30 px, arrondi doux par défaut).
 
 ## Aide-mémoire des limites
 

@@ -199,6 +199,72 @@ select { appearance: none; -webkit-appearance: none; background-image: linear-gr
 input[type="color"] { padding: 4px; height: 42px; cursor: pointer; }
 .field-hint { display: block; color: var(--dim); font-size: 10px; line-height: 15px; letter-spacing: .3px; margin-top: 6px; text-transform: none; }
 .theme-swatches { display: flex; gap: 8px; margin: 2px 0 16px; }
+.add-blocks { margin-bottom: 16px; }
+.add-blocks .field-label { margin-bottom: 8px; }
+.add-blocks-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.block-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.block-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--bg-3);
+  cursor: pointer;
+  user-select: none;
+}
+.block-card-head .b-type {
+  color: var(--white);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.block-card-head .b-hint {
+  color: var(--dim);
+  font-size: 10px;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.block-card-head .b-toggle { color: var(--dim); font-size: 10px; }
+.block-card-body { padding: 12px; display: none; }
+.block-card.open .block-card-body { display: block; }
+.block-card.open .b-toggle { transform: rotate(180deg); }
+.block-toolbar { display: flex; gap: 6px; }
+.icon-btn {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  color: var(--muted);
+  width: 26px;
+  height: 26px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color .1s ease, color .1s ease;
+}
+.icon-btn:hover { border-color: var(--muted); color: var(--white); }
+.icon-btn:disabled { opacity: .25; cursor: not-allowed; }
+.icon-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+.blocks-empty {
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  color: var(--dim);
+  font-size: 11px;
+  padding: 14px;
+  text-align: center;
+  line-height: 18px;
+}
 .swatch {
   flex: 1;
   height: 34px;
@@ -628,8 +694,25 @@ textarea { min-height: 44px; }
       </div>
     </details>
 
+    <details class="panel">
+      <summary><span class="panel-num">06</span> Les blocs dynamiques<em>événements, dates, wins…</em><span class="panel-chevron">▾</span></summary>
+      <div class="panel-body">
+        <div class="add-blocks">
+          <span class="field-label">Ajouter un bloc</span>
+          <div class="add-blocks-btns">
+            <button type="button" class="btn btn-ghost btn-sm" data-add-block="event">+ Événement</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-add-block="dates">+ Dates importantes</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-add-block="win">+ Win (photo / vidéo)</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-add-block="text">+ Paragraphe</button>
+          </div>
+          <span class="field-hint">Chaque bloc apparaît dans la lettre après le bloc 01, dans l’ordre affiché ici. Laissez vide ce dont vous n’avez pas besoin.</span>
+        </div>
+        <div id="blocksList"></div>
+      </div>
+    </details>
+
     <details class="panel" open>
-      <summary><span class="panel-num">06</span> La signature &amp; le pied de page<span class="panel-chevron">▾</span></summary>
+      <summary><span class="panel-num">07</span> La signature &amp; le pied de page<span class="panel-chevron">▾</span></summary>
       <div class="panel-body">
         <div class="grid-2">
           <label class="field"><span class="field-label">Formule de politesse</span><input type="text" data-field="signatureIntro" /></label>
@@ -649,7 +732,7 @@ textarea { min-height: 44px; }
     </details>
 
     <details class="panel" open>
-      <summary><span class="panel-num">07</span> L’apparence<em>couleurs &amp; bouton</em><span class="panel-chevron">▾</span></summary>
+      <summary><span class="panel-num">08</span> L’apparence<em>couleurs &amp; bouton</em><span class="panel-chevron">▾</span></summary>
       <div class="panel-body">
         <label class="field">
           <span class="field-label">Ambiance de couleur</span>
@@ -687,7 +770,7 @@ textarea { min-height: 44px; }
     </details>
 
     <details class="panel">
-      <summary><span class="panel-num">08</span> Personnalisation avancée<em>prénom, mise en gras…</em><span class="panel-chevron">▾</span></summary>
+      <summary><span class="panel-num">09</span> Personnalisation avancée<em>prénom, mise en gras…</em><span class="panel-chevron">▾</span></summary>
       <div class="panel-body">
         <label class="check">
           <input type="checkbox" id="personalizeName" />
@@ -911,8 +994,49 @@ textarea { min-height: 44px; }
     linkedinUrl: 'https://linkedin.com/company/evol',
     unsubNote: 'Vous recevez cette lettre car vous avez choisi d’évoluer avec nous.',
     unsubLabel: 'Se désabonner',
+    blocks: [],
     app: { theme: 'evol', bg: '#0B0B0C', veil: 'standard', ctaRadius: 26 }
   };
+
+  var BLOCK_LABELS = {
+    event: 'Événement',
+    dates: 'Dates importantes',
+    win: 'Win du moment',
+    text: 'Paragraphe'
+  };
+
+  function normalizeBlock(b) {
+    b = b && typeof b === 'object' ? b : {};
+    return {
+      type: BLOCK_LABELS[b.type] ? b.type : 'text',
+      eyebrow: String(b.eyebrow == null ? '' : b.eyebrow),
+      title: String(b.title == null ? '' : b.title),
+      body: Array.isArray(b.body) ? b.body.map(String) : (b.body ? String(b.body).split('\n') : []),
+      ctaLabel: String(b.ctaLabel == null ? '' : b.ctaLabel),
+      ctaUrl: String(b.ctaUrl == null ? '' : b.ctaUrl),
+      items: Array.isArray(b.items) ? b.items.map(String) : (b.items ? String(b.items).split('\n') : []),
+      mediaUrl: String(b.mediaUrl == null ? '' : b.mediaUrl),
+      caption: String(b.caption == null ? '' : b.caption)
+    };
+  }
+
+  function normalizeBlocks(arr) {
+    return (Array.isArray(arr) ? arr : []).map(normalizeBlock).filter(function (b) {
+      return nonEmpty(b.eyebrow) || nonEmpty(b.title) || b.body.some(nonEmpty) ||
+             b.items.some(nonEmpty) || nonEmpty(b.mediaUrl);
+    });
+  }
+
+  function escAttrUrl(u) { return escAttr(String(u || '').trim()); }
+
+  function youtubeId(url) {
+    var m = String(url || '').match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{6,})/);
+    return m ? m[1] : null;
+  }
+  function vimeoId(url) {
+    var m = String(url || '').match(/vimeo\.com\/(?:video\/)?(\d+)/);
+    return m ? m[1] : null;
+  }
 
   var DEFAULT_IMAGE = 'https://images.pexels.com/photos/34584726/pexels-photo-34584726.jpeg?auto=compress&cs=tinysrgb&h=1200&w=900';
   var LOGO_DATA_URL = null;
@@ -1069,6 +1193,122 @@ textarea { min-height: 44px; }
 
     var copy3 = paras(d.block1Body, PS, P.strong);
 
+    /* ---------- BLOCS DYNAMIQUES : événements, dates, wins, paragraphes ---------- */
+    var blocksHtml = '';
+    (normalizeBlocks(d.blocks) || []).forEach(function (b, idx, arr) {
+      var last = (idx === arr.length - 1);
+      var marginBottom = last ? '36px' : '40px';
+      var out = '';
+
+      var eyebrowHtml = nonEmpty(b.eyebrow)
+        ? '<p style="margin:0 0 16px;' + FONT + 'color:' + P.muted + ';font-size:10px;letter-spacing:2px;text-transform:uppercase;">' + esc(b.eyebrow) + '</p>'
+        : '';
+      var titleHtml = nonEmpty(b.title)
+        ? '<h2 style="margin:0 0 18px;' + FONT + 'color:' + P.strong + ';font-size:30px;line-height:38px;font-weight:600;">' + esc(b.title) + '</h2>'
+        : '';
+      var bodyHtml = '';
+      b.body.forEach(function (p) {
+        if (nonEmpty(p)) bodyHtml += '<p style="' + PS + '">' + rich(p, P.strong) + '</p>';
+      });
+      var ctaHtml = (nonEmpty(b.ctaLabel) && nonEmpty(b.ctaUrl))
+        ? '<table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr>' +
+          '<td bgcolor="' + P.bg + '" style="border:1px solid ' + P.strong + ';border-radius:' + radius + 'px;">' +
+          '<a href="' + escAttrUrl(b.ctaUrl) + '" target="_blank" style="display:inline-block;padding:12px 26px;' + FONT + 'color:' + P.strong + ';font-size:11px;font-weight:500;letter-spacing:1px;text-transform:uppercase;text-decoration:none;border-radius:' + radius + 'px;">' + esc(b.ctaLabel) + '</a>' +
+          '</td></tr></table>'
+        : '';
+
+      /* Média : image directe, GIF animé, ou miniature vidéo cliquable */
+      var mediaHtml = '';
+      if (nonEmpty(b.mediaUrl)) {
+        var mu = b.mediaUrl.trim();
+        var yt = youtubeId(mu);
+        var vm = vimeoId(mu);
+        if (yt) {
+          mediaHtml =
+            '<a href="https://www.youtube.com/watch?v=' + yt + '" target="_blank" style="text-decoration:none;">' +
+            '<img src="https://i.ytimg.com/vi/' + yt + '/hqdefault.jpg" width="504" alt="Vidéo — cliquer pour lire" style="display:block;width:100%;max-width:504px;height:auto;border:0;border-radius:6px;" />' +
+            '</a>' +
+            '<p style="margin:10px 0 0;' + FONT + 'color:' + P.dim + ';font-size:11px;">▶ Cliquez sur l’image pour lire la vidéo</p>';
+        } else if (vm) {
+          mediaHtml =
+            '<a href="' + escAttrUrl(mu) + '" target="_blank" style="text-decoration:none;">' +
+            '<img src="https://vumbnail.com/' + vm + '.jpg" width="504" alt="Vidéo — cliquer pour lire" style="display:block;width:100%;max-width:504px;height:auto;border:0;border-radius:6px;" />' +
+            '</a>' +
+            '<p style="margin:10px 0 0;' + FONT + 'color:' + P.dim + ';font-size:11px;">▶ Cliquez sur l’image pour lire la vidéo</p>';
+        } else {
+          mediaHtml =
+            '<img src="' + escAttrUrl(mu) + '" width="504" alt="" style="display:block;width:100%;max-width:504px;height:auto;border:0;border-radius:6px;" />';
+        }
+        if (nonEmpty(b.caption)) {
+          mediaHtml += '<p style="margin:10px 0 0;' + FONT + 'color:' + P.dim + ';font-size:11px;font-style:italic;">' + esc(b.caption) + '</p>';
+        }
+      }
+
+      var inner = '';
+      if (b.type === 'event') {
+        /* Événement : filet haut + bas discret, média et texte côte à côte si photo */
+        var eventText =
+          eyebrowHtml + titleHtml + bodyHtml +
+          (b.items.filter(nonEmpty).length
+            ? '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 20px;">' +
+              b.items.filter(nonEmpty).map(function (it, i, a2) {
+                return '<tr><td style="padding:0 0 ' + (i === a2.length - 1 ? '0' : '8px') + ' 0;' + FONT + 'color:' + P.body + ';font-size:14px;line-height:22px;"><strong style="color:' + P.strong + ';">' + esc(it.split('|')[0].trim()) + '</strong>' + (it.indexOf('|') !== -1 ? ' — ' + esc(it.split('|')[1].trim()) : '') + '</td></tr>';
+              }).join('') + '</table>'
+            : '') +
+          ctaHtml;
+        if (mediaHtml) {
+          inner =
+            '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tr>' +
+            '<td width="55%" valign="top" style="padding-right:20px;">' + eventText + '</td>' +
+            '<td width="45%" valign="top">' + mediaHtml + '</td>' +
+            '</tr></table>';
+        } else {
+          inner = eventText;
+        }
+        out =
+          '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 ' + marginBottom + ';"><tr>' +
+          '<td style="border-top:1px solid ' + P.line + ';font-size:0;line-height:0;" height="1">&nbsp;</td></tr>' +
+          '<tr><td style="padding:32px 0 30px;">' + inner + '</td></tr>' +
+          '<tr><td style="border-top:1px solid ' + P.line + ';font-size:0;line-height:0;" height="1">&nbsp;</td></tr></table>';
+      } else if (b.type === 'dates') {
+        /* Dates importantes : liste épurée, date en forte */
+        var rows = b.items.filter(nonEmpty).map(function (it, i, a2) {
+          var parts = it.split('|');
+          var datePart = parts[0].trim();
+          var descPart = parts.length > 1 ? parts.slice(1).join('|').trim() : '';
+          return '<tr>' +
+            '<td width="118" valign="top" style="padding:12px 16px 12px 0;' + FONT + 'color:' + P.strong + ';font-size:13px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;white-space:nowrap;">' + esc(datePart) + '</td>' +
+            '<td valign="middle" style="padding:12px 0;' + FONT + 'color:' + P.body + ';font-size:14px;line-height:21px;border-bottom:' + (i === a2.length - 1 ? 'none' : '1px solid ' + P.line) + ';">' + esc(descPart) + '</td>' +
+            '</tr>';
+        }).join('');
+        out =
+          '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 ' + marginBottom + ';"><tr>' +
+          '<td style="border-top:1px solid ' + P.line + ';font-size:0;line-height:0;" height="1">&nbsp;</td></tr>' +
+          '<tr><td style="padding:32px 0 30px;">' + eyebrowHtml + titleHtml +
+          (rows ? '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">' + rows + '</table>' : '') +
+          ctaHtml + '</td></tr></table>';
+      } else if (b.type === 'win') {
+        /* Win : encadré subtil, média pleine largeur au-dessus du texte */
+        out =
+          '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 ' + marginBottom + ';"><tr>' +
+          '<td style="border:1px solid ' + P.line + ';border-radius:8px;padding:30px 28px 28px;background-color:' + mixHex(P.bg, P.strong, 0.03) + ';">' +
+          eyebrowHtml + titleHtml +
+          (mediaHtml ? '<div style="margin:0 0 22px;">' + mediaHtml + '</div>' : '') +
+          bodyHtml + ctaHtml +
+          '</td></tr></table>';
+      } else {
+        /* Paragraphe libre : texte + média, sans habillage */
+        out =
+          '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 ' + marginBottom + ';">' +
+          '<tr><td style="padding:8px 0 4px;">' +
+          eyebrowHtml + titleHtml +
+          (mediaHtml ? '<div style="margin:0 0 24px;">' + mediaHtml + '</div>' : '') +
+          bodyHtml + ctaHtml +
+          '</td></tr></table>';
+      }
+      blocksHtml += out;
+    });
+
     /* ---------- BLOC 02 : passage à l'action (liste et bouton optionnels) ---------- */
     var hasBlock2 = nonEmpty(d.block2Num) || nonEmpty(d.block2Eyebrow) || nonEmpty(d.block2Title1) || nonEmpty(d.block2Title2);
     var block2 = '';
@@ -1109,7 +1349,7 @@ textarea { min-height: 44px; }
       '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="width:100%;background-color:' + P.bg + ';"><tr>' +
       '<td align="center" style="padding:0 24px;">' +
       cappedOpen() + '<tr><td style="padding:72px 48px 88px;">' +
-      letterInner + copy1 + pullquote + copy2 + block1 + copy3 + block2 + signature +
+      letterInner + copy1 + pullquote + copy2 + block1 + copy3 + blocksHtml + block2 + signature +
       '</td></tr></table>' +
       '</td></tr></table>';
 
@@ -1257,6 +1497,7 @@ textarea { min-height: 44px; }
     }
     var settings = loadSettings();
     $('#personalizeName').checked = !!settings.personalizeName;
+    if (typeof renderBlocks === 'function') renderBlocks();
   }
 
   function readForm() {
@@ -1267,6 +1508,7 @@ textarea { min-height: 44px; }
       state[el.getAttribute('data-arr')] = el.value.split('\n');
     });
     state.imageUrl = $('#heroImageUrl').value.trim() || heroImageDataUrl || null;
+    /* Les blocs dynamiques sont déjà synchronisés champ par champ via renderBlocks() */
   }
 
   /* ---------------- Aperçu ---------------- */
@@ -1346,6 +1588,142 @@ textarea { min-height: 44px; }
       renderPreview();
       saveState();
     });
+  }
+
+  /* ---------------- Blocs dynamiques : événements, dates, wins, paragraphes ---------------- */
+  var BLOCK_META = {
+    event: { label: 'Événement', hint: 'Titre, détails, date…' },
+    dates: { label: 'Dates importantes', hint: 'Date | description (une par ligne)' },
+    win:   { label: 'Win du moment', hint: 'Une victoire à célébrer' },
+    text:  { label: 'Paragraphe', hint: 'Texte libre, photo ou vidéo' }
+  };
+
+  function currentBlocks() {
+    if (!Array.isArray(state.blocks)) state.blocks = [];
+    return state.blocks;
+  }
+
+  function blockIsEmpty(b) {
+    return !nonEmptyStr(b.eyebrow) && !nonEmptyStr(b.title) &&
+      !(b.body || []).some(nonEmptyStr) && !(b.items || []).some(nonEmptyStr) && !nonEmptyStr(b.mediaUrl);
+  }
+  function nonEmptyStr(s) { return s && String(s).trim(); }
+
+  function addBlock(type) {
+    var b = { type: type, eyebrow: '', title: '', body: [], items: [], ctaLabel: '', ctaUrl: '', mediaUrl: '', caption: '' };
+    if (type === 'dates') b.items = ['', ''];
+    currentBlocks().push(b);
+    renderBlocks();
+    renderPreviewDebounced();
+  }
+
+  function moveBlock(i, dir) {
+    var blocks = currentBlocks();
+    var j = i + dir;
+    if (j < 0 || j >= blocks.length) return;
+    var tmp = blocks[i];
+    blocks[i] = blocks[j];
+    blocks[j] = tmp;
+    renderBlocks();
+    renderPreviewDebounced();
+  }
+
+  function removeBlock(i) {
+    currentBlocks().splice(i, 1);
+    renderBlocks();
+    renderPreviewDebounced();
+  }
+
+  function renderBlocks() {
+    var wrap = $('#blocksList');
+    var blocks = currentBlocks();
+    wrap.innerHTML = '';
+    if (!blocks.length) {
+      var empty = document.createElement('div');
+      empty.className = 'blocks-empty';
+      empty.textContent = 'Aucun bloc dynamique — utilisez les boutons ci-dessus si cette édition en demande.';
+      wrap.appendChild(empty);
+      return;
+    }
+    blocks.forEach(function (b, i) {
+      var meta = BLOCK_META[b.type] || BLOCK_META.text;
+      var card = document.createElement('div');
+      card.className = 'block-card';
+      card.innerHTML =
+        '<div class="block-card-head">' +
+        '<span class="b-type">' + meta.label + '</span>' +
+        '<span class="b-hint">' + (nonEmptyStr(b.title) ? escH(b.title) : meta.hint) + '</span>' +
+        '<span class="block-toolbar">' +
+        '<button type="button" class="icon-btn" data-act="up" title="Monter" ' + (i === 0 ? 'disabled' : '') + '>↑</button>' +
+        '<button type="button" class="icon-btn" data-act="down" title="Descendre" ' + (i === blocks.length - 1 ? 'disabled' : '') + '>↓</button>' +
+        '<button type="button" class="icon-btn danger" data-act="del" title="Supprimer">✕</button>' +
+        '</span>' +
+        '<span class="b-toggle">▾</span>' +
+        '</div>' +
+        '<div class="block-card-body"></div>';
+      card.querySelector('.block-card-head').addEventListener('click', function (e) {
+        if (e.target.closest('.icon-btn')) return;
+        card.classList.toggle('open');
+      });
+      card.querySelector('[data-act="up"]').addEventListener('click', function () { moveBlock(i, -1); });
+      card.querySelector('[data-act="down"]').addEventListener('click', function () { moveBlock(i, 1); });
+      card.querySelector('[data-act="del"]').addEventListener('click', function () { removeBlock(i); });
+
+      var body = card.querySelector('.block-card-body');
+      var fields = [
+        { key: 'eyebrow', label: 'Sur-titre', type: 'input', ph: 'ex. : À noter / Bravo à…' },
+        { key: 'title', label: 'Titre', type: 'input', ph: 'ex. : Soirée Evol de novembre' }
+      ];
+      if (b.type === 'event' || b.type === 'dates') {
+        fields.push({ key: 'items', label: b.type === 'dates' ? 'Lignes — une par ligne, format « Date | description »' : 'Détails — un par ligne (« Titre | précision » possible)', type: 'textarea', rows: 4 });
+      }
+      if (b.type !== 'dates') {
+        fields.push({ key: 'body', label: 'Texte — un paragraphe par ligne', type: 'textarea', rows: 3 });
+      }
+      if (b.type !== 'dates') {
+        fields.push({ key: 'mediaUrl', label: 'Photo (URL) ou lien YouTube / Vimeo', type: 'input', ph: 'https://…' });
+        fields.push({ key: 'caption', label: 'Légende du média (optionnelle)', type: 'input', ph: '' });
+      }
+      fields.push({ key: 'ctaLabel', label: 'Texte du bouton (optionnel)', type: 'input', ph: 'ex. : Réserver ma place' });
+      fields.push({ key: 'ctaUrl', label: 'Lien du bouton', type: 'input', ph: 'https://…' });
+
+      fields.forEach(function (f) {
+        var label = document.createElement('label');
+        label.className = 'field';
+        var span = document.createElement('span');
+        span.className = 'field-label';
+        span.textContent = f.label;
+        label.appendChild(span);
+        var input;
+        if (f.type === 'textarea') {
+          input = document.createElement('textarea');
+          input.rows = f.rows || 3;
+          input.value = (b[f.key] || []).join('\n');
+        } else {
+          input = document.createElement('input');
+          input.type = 'text';
+          input.value = b[f.key] || '';
+          if (f.ph) input.placeholder = f.ph;
+        }
+        input.addEventListener('input', function () {
+          b[f.key] = (f.type === 'textarea') ? this.value.split('\n') : this.value;
+          var hint = card.querySelector('.b-hint');
+          if (hint && f.key === 'title') hint.textContent = nonEmptyStr(b.title) ? b.title : meta.hint;
+          renderPreviewDebounced();
+        });
+        label.appendChild(input);
+        body.appendChild(label);
+      });
+
+      wrap.appendChild(card);
+    });
+  }
+
+  function bindDynamicBlocks() {
+    $$('[data-add-block]').forEach(function (btn) {
+      btn.addEventListener('click', function () { addBlock(this.getAttribute('data-add-block')); });
+    });
+    renderBlocks();
   }
 
   /* ---------------- Apparence : thème, voile, arrondi ---------------- */
@@ -1969,6 +2347,7 @@ textarea { min-height: 44px; }
   bindPreview();
   bindSplitter();
   bindAppearance();
+  bindDynamicBlocks();
   bindExportImport();
   bindModal();
   renderPreview();
