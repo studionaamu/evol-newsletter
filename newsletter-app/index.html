@@ -1,0 +1,1979 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EVOL — Éditeur de newsletter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+/* ============================================================
+   EVOL — Éditeur de newsletter · styles de l'interface
+   ============================================================ */
+:root {
+  --bg: #0B0B0C;
+  --bg-2: #0B0B12;
+  --bg-3: #101018;
+  --line: #23232E;
+  --body: #E0E0E0;
+  --muted: #9A9AA5;
+  --dim: #6E6E7A;
+  --white: #FFFFFF;
+  --accent: #FFFFFF;
+  --danger: #FF6B6B;
+  --ok: #7BE0A8;
+  --radius: 4px;
+  --font: 'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--body);
+  font-family: var(--font);
+  font-size: 14px;
+  height: 100%;
+}
+
+/* ---------- Topbar ---------- */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 24px;
+  background: rgba(5, 5, 10, 0.92);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+.topbar-brand { display: flex; align-items: baseline; gap: 12px; }
+.brand-badge {
+  color: var(--white);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 6px;
+}
+.brand-sub {
+  color: var(--dim);
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.topbar-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.save-status { color: var(--dim); font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; margin-right: 6px; }
+.save-status.saving { color: var(--muted); }
+
+/* ---------- Boutons ---------- */
+.btn {
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border-radius: var(--radius);
+  padding: 10px 18px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: opacity .15s ease, background .15s ease, border-color .15s ease;
+  white-space: nowrap;
+}
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn-primary { background: var(--white); color: #0B0B0C; border-color: var(--white); }
+.btn-primary:hover:not(:disabled) { opacity: .85; }
+.btn-outline { background: transparent; color: var(--white); border-color: var(--white); }
+.btn-outline:hover:not(:disabled) { background: rgba(255,255,255,.08); }
+.btn-ghost { background: transparent; color: var(--body); border-color: var(--line); }
+.btn-ghost:hover:not(:disabled) { border-color: var(--muted); color: var(--white); }
+.btn-sm { padding: 7px 12px; font-size: 10px; }
+.btn-danger { background: transparent; color: var(--danger); border-color: var(--danger); }
+
+/* ---------- Layout : éditeur à gauche, aperçu à droite (split ajustable) ---------- */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(340px, 460px) 6px minmax(0, 1fr);
+  height: calc(100vh - 61px);
+}
+.editor {
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 24px 20px 80px;
+  scrollbar-width: thin;
+  scrollbar-color: #2A2A35 transparent;
+}
+.splitter {
+  cursor: col-resize;
+  background: transparent;
+  position: relative;
+  z-index: 10;
+  touch-action: none;
+}
+.splitter::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 2px;
+  width: 2px;
+  background: var(--line);
+  transition: background .15s ease, width .15s ease;
+}
+.splitter:hover::after, .splitter.dragging::after {
+  background: #FFFFFF;
+  width: 3px;
+}
+body.resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+body.resizing #previewFrame { pointer-events: none; }
+
+/* ---------- Panneaux ---------- */
+.panel {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  margin-bottom: 14px;
+}
+summary {
+  list-style: none;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 16px 18px;
+  cursor: pointer;
+  user-select: none;
+}
+summary::-webkit-details-marker { display: none; }
+.panel-num {
+  color: var(--dim);
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+.panel-num::after { content: " —"; }
+summary em {
+  color: var(--dim);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-style: normal;
+  flex: 1;
+  text-align: right;
+}
+.panel-chevron { color: var(--dim); font-size: 10px; transition: transform .15s ease; }
+details[open] .panel-chevron { transform: rotate(180deg); }
+.panel-body { padding: 4px 18px 20px; }
+
+/* ---------- Champs ---------- */
+.field { display: block; margin-bottom: 14px; }
+.field.inline { flex: 1; margin: 0; }
+.field-label {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.field-label i { text-transform: none; letter-spacing: .3px; color: var(--dim); font-style: italic; }
+input[type="text"], input[type="password"], input[type="color"], select, textarea {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--body);
+  font-family: var(--font);
+  font-size: 13px;
+  line-height: 20px;
+  padding: 10px 12px;
+  resize: vertical;
+}
+input:focus, select:focus, textarea:focus { outline: none; border-color: #4A4A58; }
+select { appearance: none; -webkit-appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 18px) 55%, calc(100% - 13px) 55%; background-size: 5px 5px; background-repeat: no-repeat; cursor: pointer; }
+input[type="color"] { padding: 4px; height: 42px; cursor: pointer; }
+.field-hint { display: block; color: var(--dim); font-size: 10px; line-height: 15px; letter-spacing: .3px; margin-top: 6px; text-transform: none; }
+.theme-swatches { display: flex; gap: 8px; margin: 2px 0 16px; }
+.swatch {
+  flex: 1;
+  height: 34px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  position: relative;
+  transition: transform .1s ease, border-color .1s ease;
+}
+.swatch:hover { transform: translateY(-2px); }
+.swatch.active { border-color: #FFFFFF; box-shadow: 0 0 0 1px #FFFFFF inset; }
+.swatch.active::after {
+  content: "✓";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--white);
+  text-shadow: 0 0 4px rgba(0,0,0,.8);
+}
+textarea { min-height: 44px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid-3 { display: grid; grid-template-columns: 90px 1fr; gap: 12px; }
+
+/* ---------- Image hero ---------- */
+.field-image { margin-bottom: 16px; }
+.img-thumb {
+  width: 100%;
+  height: 150px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background-size: cover;
+  background-position: center;
+  background-color: var(--bg);
+  margin-bottom: 10px;
+}
+.img-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ---------- Cases & astuces ---------- */
+.check {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--body);
+  margin-bottom: 14px;
+  cursor: pointer;
+}
+.check input { margin-top: 2px; accent-color: #FFFFFF; }
+.hint-box {
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  color: var(--dim);
+  font-size: 11px;
+  line-height: 18px;
+}
+.hint-box p { margin: 0 0 4px; }
+.hint-box b { color: var(--muted); }
+.hint-box code {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-size: 10px;
+  color: var(--body);
+}
+
+/* ---------- Aperçu ---------- */
+.preview-pane { display: flex; flex-direction: column; min-width: 0; background: var(--bg); }
+.preview-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.seg-btn {
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  font-family: var(--font);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+.seg-btn.active { background: var(--white); color: #0B0B0C; }
+.preview-size { color: var(--dim); font-size: 10px; letter-spacing: 1px; }
+.preview-actions { margin-left: auto; display: flex; gap: 8px; }
+.preview-scroll {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255,255,255,0.03), transparent 60%),
+    var(--bg-2);
+}
+#previewFrame {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  width: 620px;
+  height: 100%;
+  min-height: 100%;
+  box-shadow: 0 20px 60px rgba(0,0,0,.5);
+  transition: width .2s ease;
+}
+#previewFrame.mobile { width: 390px; }
+
+/* ---------- Modale ---------- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.72);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 16px;
+  overflow-y: auto;
+}
+.modal-backdrop[hidden] { display: none; }
+.modal {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 28px;
+}
+.modal h2 {
+  margin: 0 0 20px;
+  color: var(--white);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: .5px;
+}
+.modal-foot { display: flex; align-items: flex-end; gap: 12px; margin: 6px 0 10px; }
+.key-link { color: var(--muted); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; padding-bottom: 12px; }
+.modal-note { color: var(--dim); font-size: 11px; line-height: 16px; margin: 8px 0 18px; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+.modal-x {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: transparent;
+  border: 0;
+  color: var(--dim);
+  font-size: 14px;
+  cursor: pointer;
+}
+.modal-x:hover { color: var(--white); }
+
+/* ---------- Envoi : confirmation & progression ---------- */
+.confirm-box {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  padding: 16px 18px;
+  font-size: 13px;
+  line-height: 22px;
+  color: var(--body);
+}
+.confirm-box p { margin: 0 0 8px; }
+.confirm-subject { color: var(--white); font-weight: 600; }
+.confirm-warn { color: var(--danger); font-size: 12px; }
+.test-result {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  padding: 12px 14px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--body);
+  margin-bottom: 14px;
+}
+.test-result.ok { border-color: var(--ok); }
+.test-result.err { border-color: var(--danger); }
+.test-result b { color: var(--white); }
+.sender-check {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  padding: 10px 12px;
+  font-size: 11px;
+  line-height: 18px;
+  margin-bottom: 14px;
+  color: var(--body);
+}
+.sender-check.ok { border-color: var(--ok); }
+.sender-check.err { border-color: #E8C468; }
+.sender-check a { color: var(--muted); }
+.sender-check select {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--body);
+  border-radius: 3px;
+  padding: 4px 6px;
+  font-size: 11px;
+  font-family: var(--font);
+  margin: 0 6px;
+}
+.contacts-meta { display: flex; gap: 14px; align-items: baseline; margin: -6px 0 14px; }
+#contactsCount { color: var(--muted); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+.contacts-warn { color: var(--danger); font-size: 11px; }
+
+.progress-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #FFFFFF, #B8B8C4);
+  transition: width .25s ease;
+}
+.progress-labels {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 1px;
+  margin: 8px 0 14px;
+}
+.send-log {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  padding: 10px 12px;
+  font-size: 11px;
+  line-height: 18px;
+  color: var(--dim);
+}
+.send-log .ok { color: var(--ok); }
+.send-log .err { color: var(--danger); }
+.send-log .warn { color: #E8C468; }
+
+/* ---------- Toast ---------- */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--white);
+  color: #0B0B0C;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: .5px;
+  padding: 12px 22px;
+  border-radius: 4px;
+  z-index: 200;
+  box-shadow: 0 10px 30px rgba(0,0,0,.6);
+}
+.toast.error { background: var(--danger); color: #FFFFFF; }
+
+/* ---------- Responsive : l'aperçu reste à droite le plus longtemps possible ---------- */
+@media (max-width: 860px) {
+  .layout { grid-template-columns: 1fr; height: auto; }
+  .splitter { display: none; }
+  .editor { border-right: 0; border-bottom: 1px solid var(--line); max-height: none; padding-bottom: 40px; }
+  .preview-pane { height: 78vh; position: sticky; top: 61px; }
+}
+@media (max-width: 640px) {
+  .topbar { flex-direction: column; align-items: flex-start; }
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  .preview-scroll { padding: 10px; }
+  #previewFrame { width: 100%; }
+  #previewFrame.mobile { width: 390px; max-width: 100%; }
+}
+
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-brand">
+    <span class="brand-badge">EVOL</span>
+    <span class="brand-sub">Éditeur de newsletter</span>
+  </div>
+  <div class="topbar-actions">
+    <span id="saveStatus" class="save-status">Enregistré</span>
+    <button class="btn btn-ghost" id="importJsonBtn" type="button">Importer</button>
+    <button class="btn btn-ghost" id="exportJsonBtn" type="button">Sauvegarde</button>
+    <button class="btn btn-ghost" id="exportHtmlBtn" type="button">Exporter l’e-mail</button>
+    <button class="btn btn-primary" id="sendBtn" type="button">Envoyer</button>
+    <input type="file" id="importJsonFile" accept="application/json,.json" hidden />
+  </div>
+</header>
+
+<main class="layout">
+
+  <!-- ===================== ÉDITEUR ===================== -->
+  <section class="editor">
+
+    <details class="panel" open>
+      <summary><span class="panel-num">01</span> L’image d’en-tête<em>photo de couverture</em><span class="panel-chevron">▾</span></summary>
+      <div class="panel-body">
+        <div class="field-image">
+          <div class="img-thumb" id="heroThumb"></div>
+          <div class="img-actions">
+            <label class="btn btn-ghost btn-sm" for="heroImageFile">Importer une photo…</label>
+            <input type="file" id="heroImageFile" accept="image/*" hidden />
+            <button class="btn btn-ghost btn-sm" id="heroImageReset" type="button">Photo par défaut</button>
+          </div>
+        </div>
+        <label class="field">
+          <span class="field-label">…ou coller l’adresse (URL) d’une image</span>
+          <input type="text" id="heroImageUrl" data-field="imageUrl" placeholder="https://…" />
+        </label>
+        <label class="field">
+          <span class="field-label">Logo (optionnel — texte « EVOL » sinon)</span>
+          <div class="img-actions">
+            <label class="btn btn-ghost btn-sm" for="logoFile">Importer un logo…</label>
+            <input type="file" id="logoFile" accept="image/*" hidden />
+            <button class="btn btn-ghost btn-sm" id="logoReset" type="button">Retirer le logo</button>
+          </div>
+        </label>
+      </div>
+    </details>
+
+    <details class="panel" open>
+      <summary><span class="panel-num">02</span> La couverture<em>hero + titre</em><span class="panel-chevron">▾</span></summary>
+      <div class="panel-body">
+        <div class="grid-2">
+          <label class="field"><span class="field-label">Numéro d’édition</span><input type="text" data-field="edition" /></label>
+          <label class="field"><span class="field-label">Sur-titre du hero</span><input type="text" data-field="eyebrow" /></label>
+        </div>
+        <div class="grid-2">
+          <label class="field"><span class="field-label">Titre — mot 1 <i>(gras)</i></span><input type="text" data-field="title1" /></label>
+          <label class="field"><span class="field-label">Titre — mot 2 <i>(fin, à la ligne)</i></span><input type="text" data-field="title2" /></label>
+        </div>
+        <div class="grid-2">
+          <label class="field"><span class="field-label">Date affichée</span><input type="text" data-field="date" /></label>
+        </div>
+      </div>
+    </details>
+
+    <details class="panel" open>
+      <summary><span class="panel-num">03</span> L’introduction<em>lettre + citation</em><span class="panel-chevron">▾</span></summary>
+      <div class="panel-body">
+        <div class="grid-2">
+          <label class="field"><span class="field-label">Sur-titre « Une lettre de… »</span><input type="text" data-field="letterEyebrow" /></label>
+        </div>
+        <label class="field">
+          <span class="field-label">Accroche (grande phrase blanche)</span>
+          <textarea data-field="lead" rows="2"></textarea>
+        </label>
+        <label class="field">
+          <span class="field-label">Introduction — un paragraphe par ligne</span>
+          <textarea data-arr="intro" rows="8"></textarea>
+        </label>
+        <label class="field">
+          <span class="field-label">Citation mise en avant</span>
+          <textarea data-field="quote" rows="3"></textarea>
+        </label>
+        <label class="field">
+          <span class="field-label">Suite de l’introduction — un paragraphe par ligne</span>
+          <textarea data-arr="afterQuote" rows="6"></textarea>
+        </label>
+      </div>
+    </details>
+
+    <details class="panel" open>
+      <summary><span class="panel-num">04</span> Le bloc 01<em>la section principale</em><span class="panel-chevron">▾</span></summary>
+      <div class="panel-body">
+        <div class="grid-3">
+          <label class="field"><span class="field-label">Numéro</span><input type="text" data-field="block1Num" /></label>
+          <label class="field"><span class="field-label">Sur-titre</span><input type="text" data-field="block1Eyebrow" /></label>
+        </div>
+        <div class="grid-2">
+          <label class="field"><span class="field-label">Titre — mot 1 <i>(gras)</i></span><input type="text" data-field="block1Title1" /></label>
+          <label class="field"><span class="field-label">Titre — mot 2 <i>(fin, à la ligne)</i></span><input type="text" data-field="block1Title2" /></label>
+        </div>
+        <label class="field">
+          <span class="field-label">Phrase d’accroche du bloc (blanche)</span>
+          <textarea data-field="block1Lead" rows="2"></textarea>
+        </label>
+        <label class="field">
+          <span class="field-label">Texte du bloc — un paragraphe par ligne</span>
+          <textarea data-arr="block1Body" rows="5"></textarea>
+        </label>
+      </div>
+    </details>
+
+    <details class="panel" open>
+      <summary><span class="panel-num">05</span> Le bloc 02<em>l’action + bouton</em><span class="panel-chevron">▾</span></summary>
+      <div class="panel-body">
+        <div class="grid-3">
+          <label class="field"><span class="field-label">Numéro</span><input type="text" data-field="block2Num" /></label>
+          <label class="field"><span class="field-label">Sur-titre</span><input type="text" data-field="block2Eyebrow" /></label>
+        </div>
+        <div class="grid-2">
+          <label class="field"><span class="field-label">Titre — mot 1 <i>(gras)</i></span><input type="text" data-field="block2Title1" /></label>
+          <label class="field"><span class="field-label">Titre — mot 2 <i>(fin, à la ligne)</i></span><input type="text" data-field="block2Title2" /></label>
+        </div>
+        <label class="field">
+          <span class="field-label">Phrase d’introduction de la liste</span>
+          <textarea data-field="block2Intro" rows="2"></textarea>
+        </label>
+        <label class="field">
+          <span class="field-label">Liste — une puce par ligne (commencent par —)</span>
+          <textarea data-arr="block2Items" rows="4"></textarea>
+        </label>
+        <label class="field">
+          <span class="field-label">Note de conclusion (blanche)</span>
+          <textarea data-field="block2Note" rows="2"></textarea>
+        </label>
+        <div class="grid-2">
+          <label class="field"><span class="field-label">Texte du bouton</span><input type="text" data-field="ctaLabel" /></label>
+          <label class="field"><span class="field-label">Lien du bouton (https:// ou mailto:)</span><input type="text" data-field="ctaUrl" /></label>
+        </div>
+      </div>
+    </details>
+
+    <details class="panel" open>
+      <summary><span class="panel-num">06</span> La signature &amp; le pied de page<span class="panel-chevron">▾</span></summary>
+      <div class="panel-body">
+        <div class="grid-2">
+          <label class="field"><span class="field-label">Formule de politesse</span><input type="text" data-field="signatureIntro" /></label>
+          <label class="field"><span class="field-label">Signature (grand nom)</span><input type="text" data-field="signatureName" /></label>
+        </div>
+        <label class="field"><span class="field-label">Devise du pied de page</span><input type="text" data-field="footerTagline" /></label>
+        <div class="grid-2">
+          <label class="field"><span class="field-label">E-mail de contact</span><input type="text" data-field="contactEmail" /></label>
+        </div>
+        <div class="grid-2">
+          <label class="field"><span class="field-label">Lien Instagram</span><input type="text" data-field="instagramUrl" /></label>
+          <label class="field"><span class="field-label">Lien LinkedIn</span><input type="text" data-field="linkedinUrl" /></label>
+        </div>
+        <label class="field"><span class="field-label">Mention de désabonnement</span><input type="text" data-field="unsubNote" /></label>
+        <label class="field"><span class="field-label">Libellé du lien de désabonnement</span><input type="text" data-field="unsubLabel" /></label>
+      </div>
+    </details>
+
+    <details class="panel" open>
+      <summary><span class="panel-num">07</span> L’apparence<em>couleurs &amp; bouton</em><span class="panel-chevron">▾</span></summary>
+      <div class="panel-body">
+        <label class="field">
+          <span class="field-label">Ambiance de couleur</span>
+          <select id="themeSelect">
+            <option value="evol">Nuit épurée — noir profond, textes clairs</option>
+            <option value="ardoise">Ardoise — gris-bleu profond</option>
+            <option value="ivoire">Ivoire — clair, chaleureux</option>
+            <option value="craie">Craie — blanc pur, sobre</option>
+            <option value="custom">Personnalisé…</option>
+          </select>
+        </label>
+        <div class="theme-swatches" id="themeSwatches"></div>
+        <label class="field" id="customBgField" hidden>
+          <span class="field-label">Couleur de fond personnalisée</span>
+          <input type="color" id="customBg" value="#0B0B0C" />
+          <span class="field-hint">Fond sombre = textes clairs, fond clair = textes foncés : le contraste s’ajuste tout seul pour rester agréable à lire.</span>
+        </label>
+        <label class="field">
+          <span class="field-label">Voile au-dessus de la photo</span>
+          <select id="veilSelect">
+            <option value="dense">Dense — titre très lisible</option>
+            <option value="standard">Standard — recommandé</option>
+            <option value="leger">Léger — photo plus présente</option>
+            <option value="aucun">Aucun — photo seule</option>
+          </select>
+        </label>
+        <label class="field">
+          <span class="field-label">Arrondi du bouton : <b id="radiusVal">26</b> px</span>
+          <input type="range" id="ctaRadius" min="0" max="30" step="2" />
+        </label>
+        <div class="hint-box">
+          <p><b>Lisibilité garantie :</b> le dégradé se termine toujours dans la couleur de fond, donc le texte reste parfaitement lisible au-dessus des paragraphes, quelle que soit la photo.</p>
+        </div>
+      </div>
+    </details>
+
+    <details class="panel">
+      <summary><span class="panel-num">08</span> Personnalisation avancée<em>prénom, mise en gras…</em><span class="panel-chevron">▾</span></summary>
+      <div class="panel-body">
+        <label class="check">
+          <input type="checkbox" id="personalizeName" />
+          <span>Personnaliser : écrire « Bonjour <b>Prénom</b>, » pour chaque destinataire (utilise la colonne prénom des contacts)</span>
+        </label>
+        <div class="hint-box">
+          <p><b>Astuces de mise en forme dans les textes :</b></p>
+          <p><code>**texte en gras**</code> — <code>*texte en italique*</code> — <code>[lien](https://exemple.fr)</code></p>
+          <p>Un retour à la ligne simple crée un saut de ligne dans le paragraphe.</p>
+        </div>
+      </div>
+    </details>
+
+  </section>
+
+  <div class="splitter" id="splitter" title="Glissez pour redimensionner — double-clic pour réinitialiser"></div>
+
+  <!-- ===================== APERÇU ===================== -->
+  <section class="preview-pane">
+    <div class="preview-bar">
+      <div class="seg" role="group">
+        <button id="previewDesktopBtn" class="seg-btn active" type="button">Desktop</button>
+        <button id="previewMobileBtn" class="seg-btn" type="button">Mobile</button>
+      </div>
+      <span id="previewSizeLabel" class="preview-size">600 px</span>
+      <div class="preview-actions">
+        <button class="btn btn-ghost btn-sm" id="copyHtmlBtn" type="button">Copier le HTML</button>
+        <button class="btn btn-ghost btn-sm" id="openTabBtn" type="button">Ouvrir dans un onglet</button>
+      </div>
+    </div>
+    <div class="preview-scroll" id="previewScroll">
+      <iframe id="previewFrame" title="Aperçu de la newsletter"></iframe>
+    </div>
+  </section>
+
+</main>
+
+<!-- ===================== MODALE D’ENVOI ===================== -->
+<div class="modal-backdrop" id="sendModal" hidden>
+  <div class="modal">
+
+    <div class="modal-step" id="sendStep1">
+      <h2>Envoyer la newsletter</h2>
+      <div class="grid-2">
+        <label class="field"><span class="field-label">Nom de l’expéditeur</span><input type="text" id="senderName" placeholder="Evol" /></label>
+        <label class="field"><span class="field-label">E-mail expéditeur <i>(validé dans Brevo)</i></span><input type="text" id="senderEmail" list="senderEmailList" placeholder="bonjour@evol.fr" /></label>
+      </div>
+      <div class="sender-check" id="senderCheck" hidden></div>
+      <datalist id="senderEmailList"></datalist>
+      <label class="field"><span class="field-label">Objet de l’e-mail</span><input type="text" id="mailSubject" /></label>
+      <label class="field">
+        <span class="field-label">Contacts — un par ligne : <code>Nom, email</code> ou simplement <code>email</code></span>
+        <textarea id="contactsText" rows="7" placeholder="Marie Dupont, marie@exemple.fr&#10;camille@exemple.fr"></textarea>
+      </label>
+      <div class="contacts-meta">
+        <span id="contactsCount">0 contact</span>
+        <span id="contactsWarn" class="contacts-warn" hidden></span>
+      </div>
+      <label class="field"><span class="field-label">Recevoir un test sur</span><input type="text" id="testEmail" placeholder="votre@email.fr" /></label>
+      <div class="test-result" id="testResult" hidden></div>
+      <div class="modal-foot">
+        <label class="field inline"><span class="field-label">Clé API Brevo</span><input type="password" id="brevoKey" placeholder="xkeysib-…" /></label>
+        <a class="key-link" href="https://app.brevo.com/settings/keys/api" target="_blank" rel="noopener">Où trouver ma clé ?</a>
+      </div>
+      <p class="modal-note">La clé reste dans ce navigateur (elle n’est jamais envoyée ailleurs que sur les serveurs de Brevo). Plan gratuit Brevo : 300 e-mails / jour.</p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" type="button" data-close="sendModal">Annuler</button>
+        <button class="btn btn-outline" id="testEmailBtn" type="button">Envoyer un test</button>
+        <button class="btn btn-primary" id="reviewSendBtn" type="button">Passer à l’envoi</button>
+      </div>
+    </div>
+
+    <div class="modal-step" id="sendStep2" hidden>
+      <h2>Confirmer l’envoi</h2>
+      <div class="confirm-box">
+        <p><b><span id="confirmCount">0</span> contacts</b> recevront l’e-mail suivant :</p>
+        <p class="confirm-subject">« <span id="confirmSubject"></span> »</p>
+        <p>Expéditeur : <span id="confirmSender"></span></p>
+        <p class="confirm-warn">Cette action enverra réellement les e-mails. Elle ne peut pas être annulée.</p>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="cancelConfirmBtn" type="button">Retour</button>
+        <button class="btn btn-primary" id="confirmSendBtn" type="button">Envoyer maintenant</button>
+      </div>
+    </div>
+
+    <div class="modal-step" id="sendStep3" hidden>
+      <h2>Envoi en cours…</h2>
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-labels"><span id="progressText">0 / 0</span><span id="progressPct">0 %</span></div>
+      <div class="send-log" id="sendLog"></div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="closeSendBtn" type="button" hidden>Terminé</button>
+      </div>
+    </div>
+
+    <button class="modal-x" type="button" data-close="sendModal" aria-label="Fermer">✕</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* ============================================================
+   EVOL — Moteur de génération du HTML email (compatible Gmail, Outlook, Apple Mail, mobile)
+   Pleine largeur (pas de barres latérales), textes de hero adaptés au thème,
+   voile réglable, arrondi du bouton, blocs optionnels.
+   ============================================================ */
+(function (global) {
+  'use strict';
+
+  var FONT = "font-family:Montserrat,'Helvetica Neue',Helvetica,Arial,sans-serif;";
+
+  /* ---------- Thèmes : dark = textes clairs partout ; light = textes foncés sur le fond,
+     mais textes CLAIRS au-dessus de la photo (le voile devient sombre pour garantir la lecture) ---------- */
+  var THEMES = {
+    evol:    { bg: '#0B0B0C', strong: '#FFFFFF', body: '#E6E6E6', muted: '#A8A8A8', dim: '#6F6F6F', line: '#262628' },
+    ardoise: { bg: '#12151B', strong: '#FFFFFF', body: '#D9DCE2', muted: '#9BA1AC', dim: '#6B7280', line: '#2B313B' },
+    ivoire:  { bg: '#F6F1E7', strong: '#211D16', body: '#3A3630', muted: '#8A8378', dim: '#A39B8E', line: '#E1D9CB', photoStrong: '#FFFFFF', photoMuted: '#F2EDE4', veilTint: '#1A140C' },
+    craie:   { bg: '#F4F4F2', strong: '#17191C', body: '#33363A', muted: '#7E838A', dim: '#9CA1A7', line: '#DEE0E2', photoStrong: '#FFFFFF', photoMuted: '#EDEDEA', veilTint: '#101112' }
+  };
+
+  /* ---------- Voiles du hero : opacité en haut / à 40 % (le dégradé se termine toujours dans la couleur de fond) ---------- */
+  var VEILS = {
+    standard: [0.55, 0.25],
+    leger:    [0.35, 0.12],
+    dense:    [0.78, 0.50],
+    aucun:    null
+  };
+
+  function hexToRgb(hex) {
+    var h = String(hex || '#000000').replace('#', '');
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    var n = parseInt(h, 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+  function mixHex(a, b, t) {
+    var A = hexToRgb(a), B = hexToRgb(b);
+    var c = A.map(function (v, i) { return Math.round(v + (B[i] - v) * t); });
+    return '#' + c.map(function (v) { return ('0' + v.toString(16)).slice(-2); }).join('');
+  }
+  function luminance(hex) {
+    var c = hexToRgb(hex).map(function (v) {
+      v = v / 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  }
+
+  function resolvePalette(d) {
+    var app = (d && d.app) || {};
+    var P;
+    if (app.theme === 'custom' && app.bg) {
+      var isLight = luminance(app.bg) > 0.6;
+      P = isLight
+        ? { bg: app.bg, strong: '#17191C', body: '#3A3D42', muted: '#7E838A', dim: '#9CA1A7', line: mixHex(app.bg, '#000000', 0.14), photoStrong: '#FFFFFF', photoMuted: mixHex(app.bg, '#FFFFFF', 0.85), veilTint: '#141210' }
+        : { bg: app.bg, strong: '#FFFFFF', body: '#E0E0E0', muted: '#B0B0B0', dim: '#707070', line: mixHex(app.bg, '#FFFFFF', 0.16) };
+    } else {
+      P = JSON.parse(JSON.stringify(THEMES[app.theme] || THEMES.evol));
+    }
+    if (!P.photoStrong) { P.photoStrong = P.strong; P.photoMuted = P.muted; P.veilTint = P.bg; }
+    P.veil = VEILS[app.veil] !== undefined ? app.veil : 'standard';
+    P.ctaRadius = (app.ctaRadius === 0 || app.ctaRadius) ? app.ctaRadius : 26;
+    return P;
+  }
+
+  var DEFAULTS = {
+    edition: 'Newsletter · 02',
+    eyebrow: 'Le point d’évolution',
+    title1: 'Revenir',
+    title2: 'à l’essentiel',
+    date: 'Septembre 2026',
+    letterEyebrow: 'Une lettre de Malaurie',
+    lead: 'Par quoi ont été rythmées vos deux premières semaines de septembre ?',
+    intro: [
+      'Bonjour,',
+      'De mon côté, elles ont été plutôt mouvementées.',
+      'Moi, c’est Malaurie, cofondatrice du projet Evol, et aujourd’hui, j’ai envie de vous partager la tempête que j’ai traversée ces derniers jours.',
+      'Au moment de la première newsletter, je me croyais prête et capable de traverser seule cette période de renouveau.',
+      'J’avais des objectifs en tête. Je voulais aussi laisser de l’espace pour me reposer, être créative et profiter d’un peu de flexibilité.',
+      'Sur le papier, le programme était plutôt bien construit.',
+      'Dans la réalité, rien ne s’est déroulé comme prévu.'
+    ],
+    quote: 'J’avais voulu construire le plan parfait pour tout changer. Mais j’ai fini par comprendre que mon corps n’était pas une machine.',
+    afterQuote: [
+      'J’ai passé la première semaine à Fontainebleau, où j’ai accompagné des amis pour les Championnats de France de saut d’obstacles des jeunes chevaux.',
+      'Résultat : aucune séance de sport, un sommeil quelque peu négligé, du Nutella tous les matins et du rosé tous les soirs.',
+      'Et quand je suis rentrée, impossible de me remettre sur les rails.',
+      'J’étais épuisée. Je forçais pour suivre ma to-do du jour. Et plus je forçais, moins j’avançais.',
+      'Et lorsque la motivation baisse, ce n’est pas forcément de davantage de volonté dont on a besoin. C’est parfois d’un autre système.'
+    ],
+    block1Num: '01',
+    block1Eyebrow: 'Le sujet du moment',
+    block1Title1: 'Un dossier',
+    block1Title2: 'à la fois.',
+    block1Lead: 'Un seul sujet. Une prochaine étape claire. Et le droit d’ajuster le reste.',
+    block1Body: [
+      'Je vous parlais de checkpoint dans ma dernière newsletter. Voici donc le mien.',
+      'Et si, à votre tour, vous preniez quelques minutes pour regarder ce qui mérite réellement d’évoluer dans votre vie ?',
+      'Pas pour tout changer d’un coup. Mais pour choisir où vous aimeriez être dans trois mois, comprendre pourquoi c’est important pour vous et identifier les premiers pas qui pourraient vous y conduire.'
+    ],
+    block2Num: '02',
+    block2Eyebrow: 'Passez à l’action',
+    block2Title1: 'Construisons',
+    block2Title2: 'votre évolution.',
+    block2Intro: 'À partir de votre checkpoint, nous allons regarder, catégorie par catégorie :',
+    block2Items: [
+      'où vous en êtes aujourd’hui ;',
+      'où vous aimeriez être dans trois mois ;',
+      'pourquoi cette évolution compte pour vous ;',
+      'et quelles actions concrètes vous pourriez mettre en place pour avancer.'
+    ],
+    block2Note: 'Pas un plan parfait. Un plan qui vous ressemble et que vous pouvez réellement mettre en œuvre.',
+    ctaLabel: 'Commencer mon checkpoint',
+    ctaUrl: 'mailto:bonjour@evol.fr?subject=Mon%20checkpoint',
+    signatureIntro: 'Je vous embrasse,',
+    signatureName: 'Malaurie',
+    footerTagline: 'Votre évolution, votre succès.',
+    contactEmail: 'bonjour@evol.fr',
+    instagramUrl: 'https://instagram.com/evol',
+    linkedinUrl: 'https://linkedin.com/company/evol',
+    unsubNote: 'Vous recevez cette lettre car vous avez choisi d’évoluer avec nous.',
+    unsubLabel: 'Se désabonner',
+    app: { theme: 'evol', bg: '#0B0B0C', veil: 'standard', ctaRadius: 26 }
+  };
+
+  var DEFAULT_IMAGE = 'https://images.pexels.com/photos/34584726/pexels-photo-34584726.jpeg?auto=compress&cs=tinysrgb&h=1200&w=900';
+  var LOGO_DATA_URL = null;
+
+  function setLogo(dataUrl) { LOGO_DATA_URL = dataUrl; }
+  function getLogo() { return LOGO_DATA_URL; }
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+  function escAttr(s) { return esc(s).replace(/'/g, '&#39;'); }
+
+  /* Paragraphes : autorise **gras**, *italique*, [lien](url) et retours à la ligne */
+  function rich(s, linkColor) {
+    var clean = esc(s == null ? '' : s);
+    clean = clean.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    clean = clean.replace(/(^|[\s(])\*([^*\n]+)\*(?=[\s.,;:!?)]|$)/g, '$1<em>$2</em>');
+    clean = clean.replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g,
+      '<a href="$2" style="color:' + (linkColor || '#FFFFFF') + ';text-decoration:underline;">$1</a>');
+    return clean.replace(/\n/g, '<br />');
+  }
+  function nonEmpty(s) { return s && String(s).trim(); }
+  function paras(arr, style, linkColor) {
+    return (arr || []).filter(nonEmpty).map(function (p) {
+      return '<p style="' + style + '">' + rich(p, linkColor) + '</p>';
+    }).join('\n');
+  }
+
+  function deepMerge(src) {
+    var out = {};
+    Object.keys(DEFAULTS).forEach(function (k) {
+      out[k] = (src && src[k] !== undefined) ? src[k] : deepCloneVal(DEFAULTS[k]);
+    });
+    Object.keys(src || {}).forEach(function (k) {
+      if (!(k in out)) out[k] = src[k];
+    });
+    return out;
+  }
+  function deepCloneVal(v) {
+    return Array.isArray(v) ? v.slice() : (v && typeof v === 'object' ? JSON.parse(JSON.stringify(v)) : v);
+  }
+
+  var HERO_MSO_OPEN = '<!--[if gte mso 9]><v:rect xmlns:v="urn:schemas-microsoft-com:vml" fill="true" stroke="false" style="width:600px;height:640px;"><v:fill type="frame" src="__IMG__" color="__BG__" /><v:textbox inset="0,0,0,0"><![endif]-->';
+  var HERO_MSO_CLOSE = '<!--[if gte mso 9]></v:textbox></v:rect><![endif]-->';
+
+  /* Table pleine largeur plafonnée à 600 px et centrée (le contenu reste élégant, le fond va jusqu'aux bords) */
+  function cappedOpen() {
+    return '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="600" align="center" style="width:100%;max-width:600px;margin:0 auto;">';
+  }
+
+  function makeIcons(strong, body) {
+    return {
+      arrowDown: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="' + body + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>',
+      mail: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="' + strong + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>',
+      arrowUpRight: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="' + strong + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg>',
+      instagram: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="' + strong + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>',
+      linkedin: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="' + strong + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></svg>'
+    };
+  }
+
+  function logoImg(color) {
+    if (LOGO_DATA_URL) {
+      return '<img src="' + LOGO_DATA_URL + '" width="84" alt="Evol" style="display:block;border:0;outline:none;width:84px;height:auto;max-width:100%;" />';
+    }
+    return '<span style="' + FONT + 'color:' + color + ';font-size:20px;font-weight:600;letter-spacing:6px;text-transform:uppercase;display:inline-block;">EVOL</span>';
+  }
+
+  function buildBody(d, P) {
+    var stops = VEILS[P.veil];
+    var ICONS = makeIcons(P.strong, P.muted);
+    var radius = parseInt(P.ctaRadius, 10) || 0;
+    var trgb = hexToRgb(P.veilTint).join(',');
+
+    var rowOpen = '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:' + P.bg + ';"><tr><td align="center" style="padding:0;">';
+
+    /* ---------- HERO : photo pleine largeur, textes clairs adaptés au thème ---------- */
+    var img = d.imageUrl || DEFAULT_IMAGE;
+    var overlay = stops
+      ? 'background:linear-gradient(180deg,rgba(' + trgb + ',' + stops[0] + ') 0%,rgba(' + trgb + ',' + stops[1] + ') 40%,' + P.bg + ' 100%);background-color:rgba(' + trgb + ',0.35);'
+      : 'background-color:transparent;';
+
+    var heroContent =
+      cappedOpen() + '<tr><td>' +
+      '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tr>' +
+      '<td align="left" style="padding-bottom:170px;">' + logoImg(P.photoStrong) + '</td>' +
+      '<td align="right" valign="top" style="padding-bottom:170px;"><span style="' + FONT + 'color:' + P.photoMuted + ';font-size:10px;letter-spacing:1.5px;text-transform:uppercase;">' + esc(d.edition) + '</span></td>' +
+      '</tr></table>' +
+      '<div style="line-height:0;font-size:0;">&nbsp;</div>' +
+      '<p style="margin:0 0 20px;' + FONT + 'color:' + P.photoMuted + ';font-size:10px;letter-spacing:2px;text-transform:uppercase;">' + esc(d.eyebrow) + '</p>' +
+      '<h1 style="margin:0 0 24px;' + FONT + 'color:' + P.photoStrong + ';font-size:52px;line-height:54px;font-weight:600;letter-spacing:-1px;">' + esc(d.title1) + '<br /><span style="font-weight:300;">' + esc(d.title2) + '</span></h1>' +
+      '<table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td style="border-top:1px solid ' + P.photoStrong + ';font-size:0;line-height:0;" width="100">&nbsp;</td></tr></table>' +
+      '<p style="margin:18px 0 0;' + FONT + 'color:' + P.photoMuted + ';font-size:11px;letter-spacing:2px;text-transform:uppercase;">' + esc(d.date) + '</p>' +
+      '<div style="line-height:0;font-size:0;">&nbsp;</div>' +
+      '</td></tr></table>';
+
+    var hero =
+      '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="width:100%;background-color:' + P.bg + ';"><tr>' +
+      '<td background="' + escAttr(img) + '" bgcolor="' + P.bg + '" valign="bottom" style="background-image:url(\'' + escAttr(img) + '\');background-size:cover;background-position:center;background-color:' + P.bg + ';">' +
+      HERO_MSO_OPEN.replace('__IMG__', escAttr(img)).replace('__BG__', P.bg) +
+      '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="width:100%;' + overlay + '">' +
+      '<tr><td align="center" style="padding:32px 40px 0;">' + heroContent + '</td></tr>' +
+      '<tr><td align="center" style="padding:60px 24px 26px;">' +
+      '<span style="' + FONT + 'color:' + P.muted + ';font-size:10px;letter-spacing:1.5px;text-transform:uppercase;">Lire la lettre</span>' +
+      '<div style="line-height:4px;font-size:0;padding-top:8px;">' + ICONS.arrowDown + '</div>' +
+      '</td></tr>' +
+      '</table>' +
+      HERO_MSO_CLOSE +
+      '</td></tr></table>';
+
+    /* ---------- LETTRE : fond pleine largeur, contenu plafonné à 600 px ---------- */
+    var letterInner =
+      '<p style="margin:0 0 28px;' + FONT + 'color:' + P.muted + ';font-size:10px;letter-spacing:2px;text-transform:uppercase;">' + esc(d.letterEyebrow) + '</p>' +
+      '<p style="margin:0 0 40px;' + FONT + 'color:' + P.strong + ';font-size:26px;line-height:36px;font-weight:600;">' + rich(d.lead, P.strong) + '</p>' +
+      '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td style="border-top:1px solid ' + P.line + ';font-size:0;line-height:0;" height="1">&nbsp;</td></tr><tr><td style="height:40px;font-size:0;line-height:0;">&nbsp;</td></tr></table>';
+
+    var PS = 'margin:0 0 24px;' + FONT + 'font-size:15px;line-height:26px;color:' + P.body + ';text-align:left;';
+
+    var copy1 = paras(d.intro, PS, P.strong);
+
+    var pullquote = nonEmpty(d.quote)
+      ? '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin:34px 0;"><tr>' +
+        '<td style="border-top:1px solid ' + P.line + ';font-size:0;line-height:0;" height="1">&nbsp;</td></tr><tr><td style="padding:30px 0;">' +
+        '<table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr>' +
+        '<td valign="top" style="' + FONT + 'color:' + P.body + ';font-size:34px;line-height:30px;font-weight:300;padding-right:12px;">&ldquo;</td>' +
+        '<td style="' + FONT + 'color:' + P.body + ';font-size:15px;line-height:25px;font-weight:300;">' + rich(d.quote, P.body) + '</td>' +
+        '</tr></table>' +
+        '</td></tr><tr><td style="border-bottom:1px solid ' + P.line + ';font-size:0;line-height:0;" height="1">&nbsp;</td></tr></table>'
+      : '';
+
+    var copy2 = paras(d.afterQuote, PS, P.strong);
+
+    /* ---------- BLOC 01 : section thématique (disparaît si entièrement vide) ---------- */
+    var hasBlock1 = nonEmpty(d.block1Num) || nonEmpty(d.block1Eyebrow) || nonEmpty(d.block1Title1) || nonEmpty(d.block1Title2);
+    var block1 = '';
+    if (hasBlock1) {
+      block1 =
+        '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin:40px 0;"><tr><td style="border-top:1px solid ' + P.line + ';font-size:0;line-height:0;" height="1">&nbsp;</td></tr>' +
+        '<tr><td style="padding:34px 0 36px;">' +
+        '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tr>' +
+        (nonEmpty(d.block1Num)
+          ? '<td width="64" valign="top" style="' + FONT + 'color:' + P.muted + ';font-size:11px;letter-spacing:1px;padding-right:16px;white-space:nowrap;">' + esc(d.block1Num) + '</td>'
+          : '') +
+        '<td valign="top">' +
+        (nonEmpty(d.block1Eyebrow) ? '<p style="margin:0 0 16px;' + FONT + 'color:' + P.muted + ';font-size:10px;letter-spacing:2px;text-transform:uppercase;">' + esc(d.block1Eyebrow) + '</p>' : '') +
+        (nonEmpty(d.block1Title1) || nonEmpty(d.block1Title2)
+          ? '<h2 style="margin:0 0 16px;' + FONT + 'color:' + P.strong + ';font-size:34px;line-height:40px;font-weight:600;">' + esc(d.block1Title1) + (nonEmpty(d.block1Title2) ? '<br /><span style="font-weight:300;">' + esc(d.block1Title2) + '</span>' : '') + '</h2>'
+          : '') +
+        (nonEmpty(d.block1Lead) ? '<p style="margin:0;' + FONT + 'color:' + P.strong + ';font-size:15px;line-height:24px;">' + rich(d.block1Lead, P.strong) + '</p>' : '') +
+        '</td></tr></table>' +
+        '</td></tr></table>';
+    }
+
+    var copy3 = paras(d.block1Body, PS, P.strong);
+
+    /* ---------- BLOC 02 : passage à l'action (liste et bouton optionnels) ---------- */
+    var hasBlock2 = nonEmpty(d.block2Num) || nonEmpty(d.block2Eyebrow) || nonEmpty(d.block2Title1) || nonEmpty(d.block2Title2);
+    var block2 = '';
+    if (hasBlock2) {
+      var items = (d.block2Items || []).filter(nonEmpty).map(function (item, i, arr) {
+        var pad = (i === arr.length - 1) ? '0' : '12px';
+        return '<tr><td colspan="2" style="padding:0 0 ' + pad + ' 24px;' + FONT + 'color:' + P.body + ';font-size:15px;line-height:24px;">&mdash;&nbsp;&nbsp;' + rich(item, P.body) + '</td></tr>';
+      }).join('');
+
+      var cta = nonEmpty(d.ctaLabel)
+        ? '<table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr>' +
+          '<td bgcolor="' + P.bg + '" style="border:1px solid ' + P.strong + ';border-radius:' + radius + 'px;">' +
+          '<a href="' + escAttr(d.ctaUrl) + '" target="_blank" style="display:inline-block;padding:13px 30px;' + FONT + 'color:' + P.strong + ';font-size:11px;font-weight:500;letter-spacing:1px;text-transform:uppercase;text-decoration:none;border-radius:' + radius + 'px;">' + ICONS.mail + '&nbsp;&nbsp;&nbsp;' + esc(d.ctaLabel) + '&nbsp;&nbsp;&nbsp;' + ICONS.arrowUpRight + '</a>' +
+          '</td></tr></table>'
+        : '';
+
+      block2 =
+        '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin:40px 0 36px;"><tr><td style="border-top:1px solid ' + P.line + ';font-size:0;line-height:0;" height="1">&nbsp;</td></tr>' +
+        '<tr><td style="padding:38px 0 40px;">' +
+        '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:30px;"><tr>' +
+        '<td align="left" style="' + FONT + 'color:' + P.muted + ';font-size:10px;letter-spacing:2px;text-transform:uppercase;">' + esc(d.block2Eyebrow) + '</td>' +
+        '<td align="right" style="' + FONT + 'color:' + P.muted + ';font-size:11px;letter-spacing:1px;">' + esc(d.block2Num) + '</td>' +
+        '</tr></table>' +
+        '<h2 style="margin:0 0 26px;' + FONT + 'color:' + P.strong + ';font-size:36px;line-height:42px;font-weight:600;">' + esc(d.block2Title1) + '<br /><span style="font-weight:300;">' + esc(d.block2Title2) + '</span></h2>' +
+        (nonEmpty(d.block2Intro) ? '<p style="' + PS + '">' + rich(d.block2Intro, P.body) + '</p>' : '') +
+        (items ? '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 26px;">' + items + '</table>' : '') +
+        (nonEmpty(d.block2Note) ? '<p style="margin:0 0 32px;' + FONT + 'color:' + P.strong + ';font-size:15px;line-height:26px;">' + rich(d.block2Note, P.strong) + '</p>' : '') +
+        cta +
+        '</td></tr></table>';
+    }
+
+    var signature = (nonEmpty(d.signatureIntro) || nonEmpty(d.signatureName))
+      ? '<p style="margin:44px 0 6px;' + FONT + 'color:' + P.body + ';font-size:15px;line-height:24px;">' + esc(d.signatureIntro) + '</p>' +
+        '<p style="margin:0;' + FONT + 'color:' + P.strong + ';font-size:26px;line-height:32px;font-weight:600;">' + esc(d.signatureName) + '</p>'
+      : '';
+
+    var letter =
+      '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="width:100%;background-color:' + P.bg + ';"><tr>' +
+      '<td align="center" style="padding:0 24px;">' +
+      cappedOpen() + '<tr><td style="padding:72px 48px 88px;">' +
+      letterInner + copy1 + pullquote + copy2 + block1 + copy3 + block2 + signature +
+      '</td></tr></table>' +
+      '</td></tr></table>';
+
+    /* ---------- FOOTER : pleine largeur, contenu plafonné ---------- */
+    var social = '';
+    if (d.instagramUrl) {
+      social += '<a href="' + escAttr(d.instagramUrl) + '" target="_blank" style="text-decoration:none;display:inline-block;padding:0 10px;">' + ICONS.instagram + '</a>';
+    }
+    if (d.linkedinUrl) {
+      social += '<a href="' + escAttr(d.linkedinUrl) + '" target="_blank" style="text-decoration:none;display:inline-block;padding:0 10px;">' + ICONS.linkedin + '</a>';
+    }
+
+    var footer =
+      '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="width:100%;background-color:' + P.bg + ';border-top:1px solid ' + P.line + ';"><tr>' +
+      '<td align="center" style="padding:0 24px;">' +
+      cappedOpen() + '<tr><td style="padding:38px 48px 40px;">' +
+      '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tr>' +
+      '<td align="left" style="padding-bottom:24px;">' + logoImg(P.strong) +
+      (nonEmpty(d.footerTagline) ? '<p style="margin:12px 0 0;' + FONT + 'color:' + P.body + ';font-size:12px;">' + esc(d.footerTagline) + '</p>' : '') +
+      '</td>' +
+      '</tr><tr><td align="left" style="padding-bottom:26px;">' + social + '</td></tr>' +
+      '<tr><td align="left" style="' + FONT + 'color:' + P.dim + ';font-size:10px;line-height:16px;">' +
+      esc(d.unsubNote) + '<br />' +
+      '<a href="mailto:' + escAttr(d.contactEmail || 'contact@evol.fr') + '?subject=Se%20d%C3%A9sabonner" style="color:' + P.dim + ';text-decoration:underline;">' + esc(d.unsubLabel) + '</a>' +
+      '</td></tr></table>' +
+      '</td></tr></table>' +
+      '</td></tr></table>';
+
+    return rowOpen + hero + letter + footer + '</td></tr></table>';
+  }
+
+  function buildEmailHtml(data, options) {
+    var d = deepMerge(data || {});
+    var opts = options || {};
+    /* Personnalisation « Bonjour Prénom » : un appel Brevo par contact */
+    if (opts.personalizeName && opts.recipients && opts.recipients.length === 1 && opts.recipients[0].name) {
+      var first = opts.recipients[0].name.split(/\s+/)[0];
+      if (d.intro && d.intro.length) {
+        d.intro = d.intro.slice();
+        d.intro[0] = 'Bonjour ' + first + ',';
+      }
+    }
+    var P = resolvePalette(d);
+    var body = buildBody(d, P);
+    return '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">' +
+      '<html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head>' +
+      '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />' +
+      '<meta name="viewport" content="width=device-width, initial-scale=1" />' +
+      '<meta name="x-apple-disable-message-reformatting" />' +
+      '<title>' + esc(d.title1 + ' ' + d.title2) + '</title>' +
+      '</head><body style="margin:0;padding:0;background-color:' + P.bg + ';-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">' +
+      '<div style="display:none;font-size:1px;color:' + P.bg + ';max-height:0;overflow:hidden;">' + esc(d.letterEyebrow) + ' — ' + esc(d.title1) + ' ' + esc(d.title2) + '</div>' +
+      '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:' + P.bg + ';"><tr><td align="center" style="padding:0;">' +
+      body +
+      '</td></tr></table></body></html>';
+  }
+
+  global.EvolEmail = {
+    DEFAULTS: DEFAULTS,
+    DEFAULT_IMAGE: DEFAULT_IMAGE,
+    THEMES: THEMES,
+    buildEmailHtml: buildEmailHtml,
+    setLogo: setLogo,
+    getLogo: getLogo
+  };
+})(window);
+
+</script>
+<script>
+/* ============================================================
+   EVOL — Éditeur de newsletter · logique applicative
+   Édition, aperçu live, export, import, envoi Brevo
+   ============================================================ */
+(function () {
+  'use strict';
+
+  var $ = function (sel) { return document.querySelector(sel); };
+  var $$ = function (sel) { return Array.prototype.slice.call(document.querySelectorAll(sel)); };
+
+  /* ---------------- État ---------------- */
+  var LS_KEY = 'evol_newsletter_data_v1';
+  var LS_CONTACTS = 'evol_newsletter_contacts_v1';
+  var LS_BREVO = 'evol_brevo_key_v1';
+  var LS_SENDER = 'evol_sender_v1';
+
+  var state = deepClone(EvolEmail.DEFAULTS);
+  var logoDataUrl = null;
+  var heroImageDataUrl = null;
+  var saveTimer = null;
+
+  function deepClone(o) { return JSON.parse(JSON.stringify(o)); }
+
+  /* ---------------- Persistance ---------------- */
+  function saveState() {
+    var status = $('#saveStatus');
+    status.textContent = 'Enregistrement…';
+    status.classList.add('saving');
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () {
+      try {
+        localStorage.setItem(LS_KEY, JSON.stringify({
+          state: state,
+          logoDataUrl: logoDataUrl,
+          heroImageDataUrl: heroImageDataUrl
+        }));
+        status.textContent = 'Enregistré';
+        status.classList.remove('saving');
+      } catch (e) {
+        status.textContent = 'Stockage plein';
+        status.classList.remove('saving');
+      }
+    }, 350);
+  }
+
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var parsed = JSON.parse(raw);
+      if (parsed && parsed.state) {
+        var merged = deepClone(EvolEmail.DEFAULTS);
+        Object.keys(parsed.state).forEach(function (k) { merged[k] = parsed.state[k]; });
+        state = merged;
+        logoDataUrl = parsed.logoDataUrl || null;
+        heroImageDataUrl = parsed.heroImageDataUrl || null;
+      }
+    } catch (e) { /* état corrompu : on repart des valeurs par défaut */ }
+  }
+
+  /* ---------------- Formulaire <-> état ---------------- */
+  function fillForm() {
+    $$('[data-field]').forEach(function (el) {
+      var key = el.getAttribute('data-field');
+      if (typeof state[key] === 'string') el.value = state[key];
+    });
+    $$('[data-arr]').forEach(function (el) {
+      var key = el.getAttribute('data-arr');
+      if (Array.isArray(state[key])) el.value = state[key].join('\n');
+    });
+    $('#heroImageUrl').value = state.imageUrl || '';
+    if (state.imageUrl) {
+      $('#heroThumb').style.backgroundImage = 'url("' + state.imageUrl.replace(/"/g, '&quot;') + '")';
+    } else {
+      $('#heroThumb').style.backgroundImage = 'url("' + EvolEmail.DEFAULT_IMAGE + '")';
+    }
+    var settings = loadSettings();
+    $('#personalizeName').checked = !!settings.personalizeName;
+  }
+
+  function readForm() {
+    $$('[data-field]').forEach(function (el) {
+      state[el.getAttribute('data-field')] = el.value;
+    });
+    $$('[data-arr]').forEach(function (el) {
+      state[el.getAttribute('data-arr')] = el.value.split('\n');
+    });
+    state.imageUrl = $('#heroImageUrl').value.trim() || heroImageDataUrl || null;
+  }
+
+  /* ---------------- Aperçu ---------------- */
+  function renderPreview() {
+    readForm();
+    EvolEmail.setLogo(logoDataUrl);
+    var html = EvolEmail.buildEmailHtml(state);
+    var frame = $('#previewFrame');
+    frame.srcdoc = html;
+  }
+
+  var previewDebounce = null;
+  function renderPreviewDebounced() {
+    clearTimeout(previewDebounce);
+    previewDebounce = setTimeout(function () {
+      renderPreview();
+      saveState();
+    }, 400);
+  }
+
+  /* ---------------- Écouteurs d'édition ---------------- */
+  function bindEditor() {
+    $$('[data-field], [data-arr]').forEach(function (el) {
+      el.addEventListener('input', renderPreviewDebounced);
+    });
+    $('#heroImageUrl').addEventListener('input', function () {
+      var url = this.value.trim() || heroImageDataUrl;
+      $('#heroThumb').style.backgroundImage = url
+        ? 'url("' + url.replace(/"/g, '&quot;') + '")'
+        : 'url("' + EvolEmail.DEFAULT_IMAGE + '")';
+      renderPreviewDebounced();
+    });
+    $('#personalizeName').addEventListener('change', function () {
+      saveSettings({ personalizeName: this.checked });
+      renderPreviewDebounced();
+    });
+  }
+
+  /* ---------------- Images importées ---------------- */
+  function readImageFile(file, cb) {
+    if (!file || !/^image\//.test(file.type)) { toast('Choisissez un fichier image (PNG, JPG…).', true); return; }
+    var reader = new FileReader();
+    reader.onload = function () { cb(String(reader.result)); };
+    reader.onerror = function () { toast('Impossible de lire ce fichier.', true); };
+    reader.readAsDataURL(file);
+  }
+
+  function bindImages() {
+    $('#heroImageFile').addEventListener('change', function () {
+      var file = this.files[0]; this.value = '';
+      readImageFile(file, function (dataUrl) {
+        heroImageDataUrl = dataUrl;
+        $('#heroImageUrl').value = '';
+        $('#heroThumb').style.backgroundImage = 'url("' + dataUrl.replace(/"/g, '&quot;') + '")';
+        renderPreview();
+        saveState();
+        toast('Photo importée. Pour l’envoi, utilisez « Exporter l’e-mail » ou hébergez l’image (voir aide).');
+      });
+    });
+    $('#heroImageReset').addEventListener('click', function () {
+      heroImageDataUrl = null;
+      $('#heroImageUrl').value = '';
+      $('#heroThumb').style.backgroundImage = 'url("' + EvolEmail.DEFAULT_IMAGE + '")';
+      renderPreview();
+      saveState();
+    });
+    $('#logoFile').addEventListener('change', function () {
+      var file = this.files[0]; this.value = '';
+      readImageFile(file, function (dataUrl) {
+        logoDataUrl = dataUrl;
+        renderPreview();
+        saveState();
+      });
+    });
+    $('#logoReset').addEventListener('click', function () {
+      logoDataUrl = null;
+      renderPreview();
+      saveState();
+    });
+  }
+
+  /* ---------------- Apparence : thème, voile, arrondi ---------------- */
+  var THEME_COLORS = { evol: '#0B0B0C', ardoise: '#12151B', ivoire: '#F6F1E7', craie: '#F4F4F2' };
+
+  function currentApp() {
+    if (!state.app || typeof state.app !== 'object') {
+      state.app = { theme: 'evol', bg: '#0B0B0C', veil: 'standard', ctaRadius: 26 };
+    }
+    return state.app;
+  }
+
+  function buildSwatches() {
+    var wrap = $('#themeSwatches');
+    wrap.innerHTML = '';
+    Object.keys(THEME_COLORS).forEach(function (key) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'swatch';
+      b.style.background = THEME_COLORS[key];
+      b.title = key;
+      b.setAttribute('data-theme', key);
+      b.addEventListener('click', function () {
+        var app = currentApp();
+        app.theme = key;
+        app.bg = THEME_COLORS[key];
+        $('#themeSelect').value = key;
+        $('#customBgField').hidden = true;
+        refreshAppearance();
+        renderPreviewDebounced();
+      });
+      wrap.appendChild(b);
+    });
+  }
+
+  function refreshAppearance() {
+    var app = currentApp();
+    $('#themeSelect').value = app.theme || 'evol';
+    $('#customBgField').hidden = app.theme !== 'custom';
+    $('#customBg').value = /^#[0-9a-fA-F]{6}$/.test(app.bg || '') ? app.bg : '#0B0B0C';
+    $('#veilSelect').value = app.veil || 'standard';
+    $('#ctaRadius').value = String(app.ctaRadius === 0 ? 0 : (app.ctaRadius || 26));
+    $('#radiusVal').textContent = String(app.ctaRadius === 0 ? 0 : (app.ctaRadius || 26));
+    $$('.swatch').forEach(function (s) {
+      s.classList.toggle('active', s.getAttribute('data-theme') === app.theme);
+    });
+  }
+
+  function bindAppearance() {
+    buildSwatches();
+    refreshAppearance();
+    $('#themeSelect').addEventListener('change', function () {
+      var app = currentApp();
+      app.theme = this.value;
+      if (this.value !== 'custom') {
+        app.bg = THEME_COLORS[this.value];
+        $('#customBgField').hidden = true;
+      } else {
+        $('#customBgField').hidden = false;
+      }
+      refreshAppearance();
+      renderPreviewDebounced();
+    });
+    $('#customBg').addEventListener('input', function () {
+      currentApp().bg = this.value;
+      renderPreviewDebounced();
+    });
+    $('#veilSelect').addEventListener('change', function () {
+      currentApp().veil = this.value;
+      renderPreviewDebounced();
+    });
+    $('#ctaRadius').addEventListener('input', function () {
+      currentApp().ctaRadius = parseInt(this.value, 10);
+      $('#radiusVal').textContent = this.value;
+      renderPreviewDebounced();
+    });
+  }
+
+  /* ---------------- Réglages (prénom, expéditeur…) ---------------- */
+  function loadSettings() {
+    try { return JSON.parse(localStorage.getItem('evol_settings_v1') || '{}'); }
+    catch (e) { return {}; }
+  }
+  function saveSettings(patch) {
+    var s = loadSettings();
+    Object.keys(patch).forEach(function (k) { s[k] = patch[k]; });
+    localStorage.setItem('evol_settings_v1', JSON.stringify(s));
+  }
+
+  /* ---------------- Aperçu : desktop / mobile, actions ---------------- */
+  function bindPreview() {
+    $('#previewDesktopBtn').addEventListener('click', function () {
+      this.classList.add('active');
+      $('#previewMobileBtn').classList.remove('active');
+      $('#previewFrame').classList.remove('mobile');
+      $('#previewSizeLabel').textContent = '620 px';
+    });
+    $('#previewMobileBtn').addEventListener('click', function () {
+      this.classList.add('active');
+      $('#previewDesktopBtn').classList.remove('active');
+      $('#previewFrame').classList.add('mobile');
+      $('#previewSizeLabel').textContent = '390 px';
+    });
+    $('#copyHtmlBtn').addEventListener('click', function () {
+      readForm();
+      EvolEmail.setLogo(logoDataUrl);
+      var html = EvolEmail.buildEmailHtml(state);
+      copyToClipboard(html).then(function () { toast('HTML copié dans le presse-papiers'); });
+    });
+    $('#openTabBtn').addEventListener('click', function () {
+      readForm();
+      EvolEmail.setLogo(logoDataUrl);
+      var html = EvolEmail.buildEmailHtml(state);
+      var blob = new Blob([html], { type: 'text/html' });
+      window.open(URL.createObjectURL(blob), '_blank');
+    });
+  }
+
+  function copyToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    return new Promise(function (resolve) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      resolve();
+    });
+  }
+
+  /* ---------------- Export / Import ---------------- */
+  function bindExportImport() {
+    $('#exportHtmlBtn').addEventListener('click', function () {
+      readForm();
+      EvolEmail.setLogo(logoDataUrl);
+      var html = EvolEmail.buildEmailHtml(state);
+      download((state.edition || 'newsletter').replace(/[^\w\-]+/g, '_') + '.html', html, 'text/html');
+      toast('Fichier HTML téléchargé (importable dans Brevo, Mailchimp…)');
+    });
+    $('#exportJsonBtn').addEventListener('click', function () {
+      readForm();
+      var payload = JSON.stringify({ version: 1, state: state, logoDataUrl: logoDataUrl, heroImageDataUrl: heroImageDataUrl }, null, 2);
+      download('evol-newsletter-' + new Date().toISOString().slice(0, 10) + '.json', payload, 'application/json');
+      toast('Sauvegarde JSON téléchargée');
+    });
+    $('#importJsonBtn').addEventListener('click', function () { $('#importJsonFile').click(); });
+    $('#importJsonFile').addEventListener('change', function () {
+      var file = this.files[0]; this.value = '';
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function () {
+        try {
+          var parsed = JSON.parse(String(reader.result));
+          if (!parsed || !parsed.state) throw new Error('format');
+          state = deepClone(EvolEmail.DEFAULTS);
+          Object.keys(parsed.state).forEach(function (k) { state[k] = parsed.state[k]; });
+          logoDataUrl = parsed.logoDataUrl || null;
+          heroImageDataUrl = parsed.heroImageDataUrl || null;
+          fillForm();
+          renderPreview();
+          saveState();
+          toast('Brouillon importé');
+        } catch (e) {
+          toast('Fichier JSON invalide.', true);
+        }
+      };
+      reader.readAsText(file);
+    });
+  }
+
+  function download(filename, content, mime) {
+    var blob = new Blob([content], { type: mime + ';charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  }
+
+  /* ---------------- Modale d'envoi ---------------- */
+  var contacts = [];
+
+  function parseContacts(text) {
+    return text.split('\n').map(function (line) { return line.trim(); }).filter(Boolean).map(function (line) {
+      var m = line.match(/^(.*?)[,;]\s*([^\s,;]+@[^\s,;]+\.[^\s,;]+)\s*$/);
+      if (m) return { name: m[1].trim().replace(/^["']|["']$/g, ''), email: m[2] };
+      var emailMatch = line.match(/[^\s,;]+@[^\s,;]+\.[^\s,;]+/);
+      if (emailMatch) return { name: '', email: emailMatch[0] };
+      return null;
+    }).filter(Boolean);
+  }
+
+  function updateContactsCount() {
+    contacts = parseContacts($('#contactsText').value);
+    var seen = {}, dupes = 0;
+    contacts = contacts.filter(function (c) {
+      var k = c.email.toLowerCase();
+      if (seen[k]) { dupes++; return false; }
+      seen[k] = true;
+      return true;
+    });
+    $('#contactsCount').textContent = contacts.length + ' contact' + (contacts.length > 1 ? 's' : '');
+    var warn = $('#contactsWarn');
+    if (contacts.length > 300) {
+      warn.textContent = 'Limite Brevo gratuite : 300 e-mails / jour.';
+      warn.hidden = false;
+    } else if (dupes > 0) {
+      warn.textContent = dupes + ' doublon' + (dupes > 1 ? 's' : '') + ' ignoré' + (dupes > 1 ? 's' : '') + '.';
+      warn.hidden = false;
+    } else {
+      warn.hidden = true;
+    }
+    localStorage.setItem(LS_CONTACTS, $('#contactsText').value);
+  }
+
+  function openModal() {
+    readForm();
+    $('#mailSubject').value = loadSettings().lastSubject ||
+      (state.letterEyebrow + ' — ' + state.title1 + ' ' + state.title2);
+    var sender = loadSettings().sender || {};
+    $('#senderName').value = sender.name || 'Evol';
+    $('#senderEmail').value = sender.email || state.contactEmail || '';
+    $('#contactsText').value = localStorage.getItem(LS_CONTACTS) || '';
+    $('#brevoKey').value = localStorage.getItem(LS_BREVO) || '';
+    $('#testEmail').value = loadSettings().testEmail || '';
+    updateContactsCount();
+    showStep(1);
+    $('#sendModal').hidden = false;
+    checkSenderValidity();
+  }
+
+  function closeModal() { $('#sendModal').hidden = true; }
+
+  function showStep(n) {
+    $('#sendStep1').hidden = n !== 1;
+    $('#sendStep2').hidden = n !== 2;
+    $('#sendStep3').hidden = n !== 3;
+  }
+
+  function getSender() {
+    return {
+      name: $('#senderName').value.trim() || 'Evol',
+      email: $('#senderEmail').value.trim()
+    };
+  }
+
+  function validateSender() {
+    var s = getSender();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.email)) {
+      toast('Renseignez un e-mail expéditeur valide (validé dans Brevo).', true);
+      return null;
+    }
+    return s;
+  }
+
+  /* ---------------- API Brevo ---------------- */
+  var sendersCache = null;
+
+  function brevoGetSenders(key) {
+    return fetch('https://api.brevo.com/v3/senders', {
+      headers: { 'accept': 'application/json', 'api-key': key }
+    }).then(function (res) {
+      if (!res.ok) throw new Error('Erreur ' + res.status);
+      return res.json();
+    });
+  }
+
+  function senderIsValid(email) {
+    if (!sendersCache) return null;
+    return sendersCache.some(function (s) {
+      return String(s.email).toLowerCase() === String(email).toLowerCase() && s.active !== false;
+    });
+  }
+
+  function checkSenderValidity() {
+    var key = $('#brevoKey').value.trim();
+    var email = $('#senderEmail').value.trim().toLowerCase();
+    var box = $('#senderCheck');
+    if (!key || !email) { box.hidden = true; return Promise.resolve(null); }
+    return brevoGetSenders(key).then(function (data) {
+      sendersCache = (data && data.senders) || [];
+      var list = $('#senderEmailList');
+      list.innerHTML = '';
+      sendersCache.forEach(function (s) {
+        var opt = document.createElement('option');
+        opt.value = s.email;
+        if (s.name) opt.label = s.name;
+        list.appendChild(opt);
+      });
+      if (senderIsValid(email)) {
+        var match = sendersCache.filter(function (s) { return String(s.email).toLowerCase() === email; })[0];
+        box.className = 'sender-check ok';
+        box.innerHTML = '<b>✓ Expéditeur validé dans Brevo</b>' + (match && match.name ? ' — ' + escH(match.name) : '');
+        box.hidden = false;
+        return true;
+      }
+      var validOnes = sendersCache.filter(function (s) { return s.active !== false; });
+      box.className = 'sender-check err';
+      box.innerHTML = '<b>⚠ « ' + escH(email) + ' » n’est pas un expéditeur validé dans Brevo.</b><br />' +
+        (validOnes.length
+          ? 'Utiliser un expéditeur déjà validé : <select id="senderPick">' + validOnes.map(function (s) { return '<option value="' + escH(s.email) + '">' + escH(s.email) + '</option>'; }).join('') + '</select><button type="button" class="btn btn-ghost btn-sm" id="senderUseBtn">Utiliser</button><br />'
+          : '') +
+        'Ou validez « ' + escH(email) + ' » : <a href="https://app.brevo.com/settings/senders" target="_blank" rel="noopener">Brevo → Expéditeurs &amp; IP → Ajouter un expéditeur</a>, puis cliquez le lien de confirmation envoyé par Brevo à cette adresse.';
+      box.hidden = false;
+      var useBtn = $('#senderUseBtn');
+      if (useBtn) {
+        useBtn.addEventListener('click', function () {
+          $('#senderEmail').value = $('#senderPick').value;
+          checkSenderValidity();
+        });
+      }
+      return false;
+    }).catch(function () {
+      box.hidden = true;
+      return null;
+    });
+  }
+
+  function brevoSend(key, payload) {
+    return fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'api-key': key,
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    }).then(function (res) {
+      if (res.status === 401) throw new Error('Clé API invalide (401).');
+      if (res.status === 429) throw new Error('Quota Brevo atteint (429) — réessayez demain ou augmente la limite.');
+      return res.json().then(function (data) {
+        if (!res.ok) {
+          var msg = (data && data.message) ? data.message : ('Erreur ' + res.status);
+          throw new Error(msg);
+        }
+        return data;
+      });
+    });
+  }
+
+  function buildPayloadFor(recipients, sender, subject, personalize) {
+    readForm();
+    EvolEmail.setLogo(logoDataUrl);
+    var to = recipients.map(function (c) { return { email: c.email, name: c.name || undefined }; });
+    var html = EvolEmail.buildEmailHtml(state, { recipients: recipients, personalizeName: personalize });
+    return {
+      sender: { name: sender.name, email: sender.email },
+      to: to,
+      subject: subject,
+      htmlContent: html,
+      headers: { 'List-Unsubscribe': '<mailto:' + (state.contactEmail || sender.email) + '?subject=Se%20désabonner>' }
+    };
+  }
+
+  /* Attention : Brevo applique la personnalisation par e-mail, pas par lot.
+     Si la personnalisation « Bonjour {prénom} » est active, on envoie un appel par contact (plus lent mais correct). */
+  function sendBatch(key, sender, subject, batch, personalize) {
+    if (personalize && batch.length > 1) {
+      return sequentialSend(key, sender, subject, batch, personalize);
+    }
+    return brevoSend(key, buildPayloadFor(batch, sender, subject, personalize));
+  }
+
+  function sequentialSend(key, sender, subject, list, personalize) {
+    var index = 0;
+    function next() {
+      if (index >= list.length) return Promise.resolve();
+      var c = list[index++];
+      return brevoSend(key, buildPayloadFor([c], sender, subject, personalize)).then(next);
+    }
+    return next();
+  }
+
+  function escH(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function setTestResult(kind, html) {
+    var box = $('#testResult');
+    box.className = 'test-result' + (kind ? ' ' + kind : '');
+    box.innerHTML = html;
+    box.hidden = !html;
+  }
+
+  function sendTest() {
+    var key = $('#brevoKey').value.trim();
+    var sender = validateSender();
+    var testAddr = $('#testEmail').value.trim();
+    setTestResult('', '');
+    if (!key) { setTestResult('err', 'Renseignez votre clé API Brevo.'); return; }
+    if (!testAddr) { setTestResult('err', 'Renseignez l’e-mail de test.'); return; }
+    if (senderIsValid(sender.email) === false) {
+      setTestResult('err', 'L’expéditeur ' + escH(sender.email) + ' n’est pas validé dans Brevo. Corrigez-le dans l’encadré au-dessus, puis réessayez.');
+      return;
+    }
+    saveSenderAndKey();
+    var btn = $('#testEmailBtn');
+    btn.disabled = true;
+    btn.textContent = 'Envoi…';
+    var personalize = $('#personalizeName').checked;
+    var payload = buildPayloadFor([{ name: 'Test', email: testAddr }], sender, '[TEST] ' + $('#mailSubject').value, personalize);
+    brevoSend(key, payload).then(function (data) {
+      var id = (data && data.messageId) ? String(data.messageId) : '';
+      setTestResult('ok',
+        '<b>E-mail accepté par Brevo ✓</b><br />' +
+        '1. Vérifiez la boîte de <b>réception</b> de ' + escH(testAddr) + '… et surtout le dossier <b>spam / promotions</b>.<br />' +
+        '2. Toujours rien après 5 minutes ? Ouvrez Brevo → <b>Transactionnel → Logs</b> et cherchez « ' + escH(testAddr) + ' » : le statut indique si l’e-mail est « delivered », « soft bounce », « blocked » ou « spam ».' +
+        (id ? '<br /><span style="color:#6E6E7A;">ID Brevo : ' + escH(id) + '</span>' : ''));
+      toast('E-mail de test accepté par Brevo');
+    }).catch(function (err) {
+      var msg = err.message || 'Erreur inconnue';
+      var hint = '';
+      if (/401|clé|unauthor/i.test(msg)) hint = '<br />Astuce : la clé doit être active et commencer par « xkeysib- » (Brevo → SMTP &amp; API → Clés API).';
+      else if (/sender|expéditeur/i.test(msg)) hint = '<br />Astuce : validez d’abord votre e-mail expéditeur dans Brevo (Expéditeurs &amp; IP), puis réessayez.';
+      setTestResult('err', '<b>Échec de l’envoi du test</b><br />' + escH(msg) + hint);
+      toast('Échec du test : ' + msg, true);
+    }).finally(function () {
+      btn.disabled = false;
+      btn.textContent = 'Envoyer un test';
+    });
+  }
+
+  function saveSenderAndKey() {
+    localStorage.setItem(LS_BREVO, $('#brevoKey').value.trim());
+    saveSettings({
+      sender: { name: $('#senderName').value.trim(), email: $('#senderEmail').value.trim() },
+      lastSubject: $('#mailSubject').value.trim(),
+      testEmail: $('#testEmail').value.trim()
+    });
+  }
+
+  function startSend() {
+    var key = $('#brevoKey').value.trim();
+    var sender = validateSender();
+    var subject = $('#mailSubject').value.trim();
+    if (!key) { toast('Renseignez votre clé API Brevo.', true); showStep(1); return; }
+    if (!subject) { toast('Renseignez l’objet de l’e-mail.', true); showStep(1); return; }
+    if (!contacts.length) { toast('Ajoutez au moins un contact.', true); showStep(1); return; }
+    if (senderIsValid(sender.email) === false) {
+      toast('Expéditeur non validé dans Brevo — corrigez-le via l’encadré de vérification.', true);
+      showStep(1);
+      return;
+    }
+
+    $('#confirmCount').textContent = String(contacts.length);
+    $('#confirmSubject').textContent = subject;
+    var s = getSender();
+    $('#confirmSender').textContent = s.name + ' <' + s.email + '>';
+    showStep(2);
+  }
+
+  function runSend() {
+    var key = $('#brevoKey').value.trim();
+    var sender = validateSender();
+    var subject = $('#mailSubject').value.trim();
+    var personalize = $('#personalizeName').checked;
+    if (!sender) { showStep(1); return; }
+
+    saveSenderAndKey();
+    showStep(3);
+    $('#closeSendBtn').hidden = true;
+    var log = $('#sendLog');
+    log.innerHTML = '';
+    var total = contacts.length;
+    var done = 0, failed = 0;
+
+    function progress() {
+      var pct = Math.round((done / total) * 100);
+      $('#progressFill').style.width = pct + '%';
+      $('#progressText').textContent = done + ' / ' + total;
+      $('#progressPct').textContent = pct + ' %';
+    }
+
+    function addLog(line, cls) {
+      var div = document.createElement('div');
+      if (cls) div.className = cls;
+      div.textContent = line;
+      log.appendChild(div);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    progress();
+    var BATCH = 20;
+    var batches = [];
+    for (var i = 0; i < total; i += BATCH) batches.push(contacts.slice(i, i + BATCH));
+
+    addLog('Envoi vers ' + total + ' contact' + (total > 1 ? 's' : '') + '…');
+
+    var p = Promise.resolve();
+    batches.forEach(function (batch, bi) {
+      p = p.then(function () {
+        return sendBatch(key, sender, subject, batch, personalize).then(function () {
+          done += batch.length;
+          progress();
+          addLog('Lot ' + (bi + 1) + '/' + batches.length + ' : ' + batch.length + ' envoyé(s) ✓', 'ok');
+        }).catch(function (err) {
+          /* Retraille : renvoi un par un pour isoler les adresses en erreur */
+          addLog('Lot ' + (bi + 1) + ' en erreur (' + err.message + ') — nouvel essai unitaire…', 'warn');
+          return Promise.all(batch.map(function (c) {
+            return brevoSend(key, buildPayloadFor([c], sender, subject, personalize)).then(function () {
+              done++; progress();
+            }).catch(function (e2) {
+              done++; failed++; progress();
+              addLog('✗ ' + c.email + ' : ' + e2.message, 'err');
+            });
+          }));
+        });
+      });
+    });
+
+    p.then(function () {
+      addLog('— Terminé : ' + (done - failed) + ' envoyé(s)' + (failed ? ', ' + failed + ' en échec' : '') + ' —', failed ? 'warn' : 'ok');
+      $('#closeSendBtn').hidden = false;
+      if (!failed) toast('Newsletter envoyée !');
+    });
+  }
+
+  /* ---------------- Bind modale ---------------- */
+  function bindModal() {
+    $('#sendBtn').addEventListener('click', openModal);
+    $$('[data-close="sendModal"]').forEach(function (btn) {
+      btn.addEventListener('click', closeModal);
+    });
+    $('#sendModal').addEventListener('click', function (e) {
+      if (e.target === this) closeModal();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !$('#sendModal').hidden) closeModal();
+    });
+    $('#contactsText').addEventListener('input', updateContactsCount);
+    var senderCheckTimer = null;
+    $('#senderEmail').addEventListener('input', function () {
+      clearTimeout(senderCheckTimer);
+      senderCheckTimer = setTimeout(checkSenderValidity, 700);
+    });
+    $('#brevoKey').addEventListener('change', function () {
+      sendersCache = null;
+      checkSenderValidity();
+    });
+    $('#testEmailBtn').addEventListener('click', sendTest);
+    $('#reviewSendBtn').addEventListener('click', startSend);
+    $('#cancelConfirmBtn').addEventListener('click', function () { showStep(1); });
+    $('#confirmSendBtn').addEventListener('click', runSend);
+    $('#closeSendBtn').addEventListener('click', closeModal);
+  }
+
+  /* ---------------- Splitter : aperçu redimensionnable ---------------- */
+  function bindSplitter() {
+    var layout = document.querySelector('.layout');
+    var splitter = $('#splitter');
+    var LS_SPLIT = 'evol_split_width_v1';
+    var saved = parseInt(localStorage.getItem(LS_SPLIT), 10);
+    if (saved >= 300 && saved <= 780) layout.style.gridTemplateColumns = saved + 'px 6px minmax(0, 1fr)';
+
+    var startX = 0, startW = 0;
+    function onMove(e) {
+      var w = Math.min(780, Math.max(300, startW + (e.clientX - startX)));
+      layout.style.gridTemplateColumns = w + 'px 6px minmax(0, 1fr)';
+    }
+    function onUp() {
+      document.body.classList.remove('resizing');
+      splitter.classList.remove('dragging');
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      var w = parseInt(layout.style.gridTemplateColumns, 10) || 460;
+      localStorage.setItem(LS_SPLIT, String(w));
+    }
+    splitter.addEventListener('mousedown', function (e) {
+      e.preventDefault();
+      startX = e.clientX;
+      startW = document.querySelector('.editor').getBoundingClientRect().width;
+      document.body.classList.add('resizing');
+      splitter.classList.add('dragging');
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+    splitter.addEventListener('dblclick', function () {
+      layout.style.gridTemplateColumns = '';
+      localStorage.removeItem(LS_SPLIT);
+    });
+    /* Tactile */
+    splitter.addEventListener('touchstart', function (e) {
+      startX = e.touches[0].clientX;
+      startW = document.querySelector('.editor').getBoundingClientRect().width;
+      document.body.classList.add('resizing');
+    }, { passive: true });
+    splitter.addEventListener('touchmove', function (e) {
+      if (!startX) return;
+      var w = Math.min(780, Math.max(300, startW + (e.touches[0].clientX - startX)));
+      layout.style.gridTemplateColumns = w + 'px 6px minmax(0, 1fr)';
+      e.preventDefault();
+    }, { passive: false });
+    splitter.addEventListener('touchend', function () {
+      document.body.classList.remove('resizing');
+      startX = 0;
+      var w = parseInt(layout.style.gridTemplateColumns, 10) || 460;
+      localStorage.setItem(LS_SPLIT, String(w));
+    });
+  }
+
+  /* ---------------- Toast ---------------- */
+  var toastTimer = null;
+  function toast(msg, isError) {
+    var t = $('#toast');
+    t.textContent = msg;
+    t.classList.toggle('error', !!isError);
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.hidden = true; }, 3800);
+  }
+
+  /* ---------------- Init ---------------- */
+  loadState();
+  fillForm();
+  bindEditor();
+  bindImages();
+  bindPreview();
+  bindSplitter();
+  bindAppearance();
+  bindExportImport();
+  bindModal();
+  renderPreview();
+})();
+
+</script>
+</body>
+</html>
