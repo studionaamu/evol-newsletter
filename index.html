@@ -239,13 +239,45 @@ input[type="color"] { padding: 4px; height: 42px; cursor: pointer; }
 .block-card.open .b-toggle { transform: rotate(180deg); }
 .block-toolbar { display: flex; gap: 6px; }
 .drag-handle {
-  color: var(--dim);
+  color: var(--muted);
   cursor: grab;
-  font-size: 13px;
+  font-size: 16px;
   line-height: 1;
   letter-spacing: 1px;
   touch-action: none;
-  padding: 0 2px;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+.drag-handle:hover { color: var(--white); background: rgba(255, 255, 255, .07); }
+.section-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  user-select: none;
+}
+.section-row.dragging { opacity: .45; border-color: var(--muted); }
+.section-row .s-label {
+  flex: 1;
+  color: var(--white);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.section-row .s-label em {
+  display: block;
+  color: var(--dim);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 400;
+  letter-spacing: .3px;
+  text-transform: none;
+  margin-top: 2px;
 }
 .drag-handle:active { cursor: grabbing; }
 .block-card.dragging { opacity: .45; border-color: var(--muted); }
@@ -600,6 +632,15 @@ textarea { min-height: 44px; }
 
   <!-- ===================== ÉDITEUR ===================== -->
   <section class="editor">
+
+    <details class="panel" open>
+      <summary><span class="panel-num">↕</span> La structure de la lettre<em>glisser pour réordonner</em><span class="panel-chevron">▾</span></summary>
+      <div class="panel-body">
+        <span class="field-hint" style="margin-bottom:10px;">Attrapez la poignée ⠿ et glissez une section pour changer l’ordre de la lettre (ou utilisez ↑ ↓). La photo d’en-tête reste en haut et le pied de page en bas.</span>
+        <div id="sectionsList"></div>
+        <button type="button" class="btn btn-ghost btn-sm" id="sectionsReset">Rétablir l’ordre d’origine</button>
+      </div>
+    </details>
 
     <details class="panel" open>
       <summary><span class="panel-num">01</span> L’image d’en-tête<em>photo de couverture</em><span class="panel-chevron">▾</span></summary>
@@ -964,6 +1005,24 @@ textarea { min-height: 44px; }
     return P;
   }
 
+  /* Ordre par défaut des sections de la lettre (modifiable par glisser-déposer dans l'éditeur) */
+  var SECTION_ORDER = ['intro', 'quote', 'afterQuote', 'block1', 'blocks', 'block2', 'signature'];
+
+  function sectionHtml(d, map) {
+    var order = (Array.isArray(d.sectionOrder) && d.sectionOrder.length) ? d.sectionOrder : SECTION_ORDER;
+    var out = '';
+    var seen = {};
+    order.forEach(function (k) {
+      if (!map[k] || seen[k]) return;
+      seen[k] = true;
+      out += map[k];
+    });
+    SECTION_ORDER.forEach(function (k) {
+      if (!seen[k] && map[k]) out += map[k];
+    });
+    return out;
+  }
+
   var DEFAULTS = {
     edition: 'Newsletter · 02',
     eyebrow: 'Le point d’évolution',
@@ -1022,6 +1081,7 @@ textarea { min-height: 44px; }
     unsubNote: 'Vous recevez cette lettre car vous avez choisi d’évoluer avec nous.',
     unsubLabel: 'Se désabonner',
     blocks: [],
+    sectionOrder: SECTION_ORDER.slice(),
     app: { theme: 'evol', bg: '#0B0B0C', veil: 'standard', ctaRadius: 26 }
   };
 
@@ -1376,7 +1436,15 @@ textarea { min-height: 44px; }
       '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="width:100%;background-color:' + P.bg + ';"><tr>' +
       '<td align="center" style="padding:0 24px;">' +
       cappedOpen() + '<tr><td style="padding:72px 48px 88px;">' +
-      letterInner + copy1 + pullquote + copy2 + block1 + copy3 + blocksHtml + block2 + signature +
+      sectionHtml(d, {
+        intro: letterInner + copy1,
+        quote: pullquote,
+        afterQuote: copy2,
+        block1: block1 + copy3,
+        blocks: blocksHtml,
+        block2: block2,
+        signature: signature
+      }) +
       '</td></tr></table>' +
       '</td></tr></table>';
 
@@ -1437,6 +1505,7 @@ textarea { min-height: 44px; }
   global.EvolEmail = {
     DEFAULTS: DEFAULTS,
     DEFAULT_IMAGE: DEFAULT_IMAGE,
+    SECTION_ORDER: SECTION_ORDER,
     THEMES: THEMES,
     buildEmailHtml: buildEmailHtml,
     setLogo: setLogo,
@@ -1862,35 +1931,35 @@ textarea { min-height: 44px; }
     return box;
   }
 
-  /* Déplacement des blocs par glisser-déposer (souris et tactile) */
-  function bindBlockDrag() {
-    var wrap = $('#blocksList');
-    var dragCard = null;
-    var snapshot = null;
+  /* Glisser-déposer générique (souris et tactile) : réordonne les enfants [data-idx] */
+  function bindDragSort(wrap, itemSelector, commit) {
+    var dragEl = null;
+    var moved = false;
 
     wrap.addEventListener('pointerdown', function (e) {
       var handle = e.target.closest('.drag-handle');
       if (!handle || !wrap.contains(handle)) return;
-      var card = handle.closest('.block-card');
-      if (!card) return;
+      var el = handle.closest(itemSelector);
+      if (!el) return;
       e.preventDefault();
-      dragCard = card;
-      snapshot = currentBlocks().slice();
-      card.classList.add('dragging');
+      dragEl = el;
+      moved = false;
+      el.classList.add('dragging');
       try { handle.setPointerCapture(e.pointerId); } catch (err) { /* pas de capture : le glisser reste possible */ }
 
       function place(ev) {
-        var cards = Array.prototype.slice.call(wrap.querySelectorAll('.block-card'));
+        var els = Array.prototype.slice.call(wrap.querySelectorAll(itemSelector));
         var after = null;
-        cards.forEach(function (c) {
-          if (c === dragCard) return;
+        els.forEach(function (c) {
+          if (c === dragEl) return;
           var r = c.getBoundingClientRect();
           if (ev.clientY > r.top + r.height / 2) after = c;
         });
         if (after) {
-          if (after.nextElementSibling !== dragCard) wrap.insertBefore(dragCard, after.nextElementSibling);
-        } else if (wrap.firstElementChild !== dragCard) {
-          wrap.insertBefore(dragCard, wrap.firstElementChild);
+          if (after.nextElementSibling !== dragEl) { wrap.insertBefore(dragEl, after.nextElementSibling); moved = true; }
+        } else if (wrap.firstElementChild !== dragEl) {
+          wrap.insertBefore(dragEl, wrap.firstElementChild);
+          moved = true;
         }
       }
 
@@ -1898,18 +1967,14 @@ textarea { min-height: 44px; }
         handle.removeEventListener('pointermove', place);
         handle.removeEventListener('pointerup', finish);
         handle.removeEventListener('pointercancel', finish);
-        if (dragCard) dragCard.classList.remove('dragging');
-        dragCard = null;
-        var order = Array.prototype.slice.call(wrap.querySelectorAll('.block-card')).map(function (c) {
+        if (dragEl) dragEl.classList.remove('dragging');
+        dragEl = null;
+        if (!moved) return;
+        moved = false;
+        var order = Array.prototype.slice.call(wrap.querySelectorAll(itemSelector)).map(function (c) {
           return parseInt(c.getAttribute('data-idx'), 10);
         });
-        var changed = order.some(function (v, i) { return v !== i; });
-        if (!changed || !snapshot) { snapshot = null; return; }
-        state.blocks = order.map(function (idx) { return snapshot[idx]; });
-        snapshot = null;
-        renderBlocks();
-        renderPreview();
-        saveState();
+        commit(order);
       }
 
       handle.addEventListener('pointermove', place);
@@ -1922,8 +1987,83 @@ textarea { min-height: 44px; }
     $$('[data-add-block]').forEach(function (btn) {
       btn.addEventListener('click', function () { addBlock(this.getAttribute('data-add-block')); });
     });
-    bindBlockDrag();
+    bindDragSort($('#blocksList'), '.block-card', function (order) {
+      var src = currentBlocks();
+      state.blocks = order.map(function (idx) { return src[idx]; });
+      renderBlocks();
+      renderPreview();
+      saveState();
+    });
     renderBlocks();
+  }
+
+  /* ---------------- Structure de la lettre : les grandes sections ---------------- */
+  var SECTION_META = {
+    intro: { label: 'L’introduction', hint: 'sur-titre, accroche, texte' },
+    quote: { label: 'La citation', hint: 'phrase mise en avant' },
+    afterQuote: { label: 'La suite de l’introduction', hint: 'la lettre continue' },
+    block1: { label: 'Le bloc 01', hint: 'la section principale' },
+    blocks: { label: 'Les blocs dynamiques', hint: 'événements, dates, wins' },
+    block2: { label: 'Le bloc 02', hint: 'l’action et le bouton' },
+    signature: { label: 'La signature', hint: 'formule et grand nom' }
+  };
+
+  function currentOrder() {
+    if (!Array.isArray(state.sectionOrder) || !state.sectionOrder.length) {
+      state.sectionOrder = EvolEmail.SECTION_ORDER.slice();
+    }
+    return state.sectionOrder;
+  }
+
+  function moveSection(i, dir) {
+    var order = currentOrder();
+    var j = i + dir;
+    if (j < 0 || j >= order.length) return;
+    var tmp = order[i];
+    order[i] = order[j];
+    order[j] = tmp;
+    renderSections();
+    renderPreview();
+    saveState();
+  }
+
+  function renderSections() {
+    var wrap = $('#sectionsList');
+    var order = currentOrder();
+    wrap.innerHTML = '';
+    order.forEach(function (key, i) {
+      var meta = SECTION_META[key] || { label: key, hint: '' };
+      var row = document.createElement('div');
+      row.className = 'section-row';
+      row.setAttribute('data-idx', String(i));
+      row.innerHTML =
+        '<span class="drag-handle" title="Glisser pour déplacer">⠿</span>' +
+        '<span class="s-label">' + escH(meta.label) + (meta.hint ? '<em>' + escH(meta.hint) + '</em>' : '') + '</span>' +
+        '<span class="block-toolbar">' +
+        '<button type="button" class="icon-btn" data-act="up" title="Monter" ' + (i === 0 ? 'disabled' : '') + '>↑</button>' +
+        '<button type="button" class="icon-btn" data-act="down" title="Descendre" ' + (i === order.length - 1 ? 'disabled' : '') + '>↓</button>' +
+        '</span>';
+      row.querySelector('[data-act="up"]').addEventListener('click', function () { moveSection(i, -1); });
+      row.querySelector('[data-act="down"]').addEventListener('click', function () { moveSection(i, 1); });
+      wrap.appendChild(row);
+    });
+  }
+
+  function bindSections() {
+    renderSections();
+    bindDragSort($('#sectionsList'), '.section-row', function (order) {
+      var src = currentOrder();
+      state.sectionOrder = order.map(function (idx) { return src[idx]; });
+      renderSections();
+      renderPreview();
+      saveState();
+    });
+    $('#sectionsReset').addEventListener('click', function () {
+      state.sectionOrder = EvolEmail.SECTION_ORDER.slice();
+      renderSections();
+      renderPreview();
+      saveState();
+    });
   }
 
   /* ---------------- Apparence : thème, voile, arrondi ---------------- */
@@ -2547,6 +2687,7 @@ textarea { min-height: 44px; }
   bindPreview();
   bindSplitter();
   bindAppearance();
+  bindSections();
   bindDynamicBlocks();
   bindExportImport();
   bindModal();

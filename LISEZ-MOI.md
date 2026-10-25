@@ -4,7 +4,7 @@ Un seul fichier : **`index.html`**. Double-cliquez dessus : il s'ouvre dans votr
 
 ## 1. Écrire la newsletter
 
-- **Colonne de gauche** : tous les textes, classés en 9 panneaux (image d'en-tête, titre, introduction, blocs 01/02, blocs dynamiques, signature, apparence, options).
+- **Colonne de gauche** : tous les textes, classés en 10 panneaux (structure, image d'en-tête, titre, introduction, blocs 01/02, blocs dynamiques, signature, apparence, options).
 - Tout est **enregistré automatiquement** dans le navigateur (« Enregistré » en haut).
 - **Mise en forme** dans les zones de texte :
   - `**texte en gras**` → **texte en gras**
@@ -48,6 +48,17 @@ Panneau **07 — Personnalisation avancée** : cochez la case et chaque contact 
 - **Importer** : recharge un `.json` sauvegardé.
 - **Exporter l'e-mail** : télécharge le HTML final, importable dans Brevo, Mailchimp, Gmail (via un outil comme « Templates ») ou tout autre outil d'envoi — utile si vous préférez passer par un autre service.
 
+## Réordonner les grandes sections (panneau ↕)
+
+Le premier panneau, **La structure de la lettre**, liste les grandes parties dans leur ordre d'apparition : introduction, citation, suite de l'introduction, bloc 01, blocs dynamiques, bloc 02, signature.
+
+- **Attrapez la poignée ⠿** et glissez une section vers le haut ou le bas : l'ordre du panneau et l'aperçu de l'e-mail se mettent à jour au lâcher (souris et doigt).
+- Les flèches **↑ ↓** font la même chose pour un ajustement fin.
+- **Rétablir l'ordre d'origine** remet la lettre dans sa progression habituelle.
+- L'ordre est enregistré avec le reste : il est conservé au rechargement et dans le fichier exporté.
+
+La photo d'en-tête reste toujours en haut et le pied de page en bas : seules les sections du corps de la lettre se déplacent.
+
 ## Les blocs dynamiques (panneau 06)
 
 Certaines éditions demandent d'annoncer un événement, lister des dates ou célébrer une réussite. Le panneau **06 — Les blocs dynamiques** permet d'ajouter autant de blocs que nécessaire, dans l'ordre voulu :
@@ -64,7 +75,7 @@ Chaque bloc se déplace (↑ ↓), se déplie en cliquant sur son en-tête et se
 - **Photo en ligne** : collez plutôt l'adresse (URL) d'une image hébergée (voir §2) — c'est la solution la plus sûre pour un envoi réel.
 - **Vidéo YouTube / Vimeo** : collez simplement le lien de la vidéo — les e-mails ne peuvent pas lire de vidéo directement, donc l'outil insère automatiquement **la miniature de la vidéo avec un bouton de lecture** : le destinataire clique et la vidéo s'ouvre.
 
-Les blocs sont insérés dans la lettre **après le bloc 01**, dans l'ordre affiché. Un bloc laissé vide n'apparaît pas dans l'e-mail : vous n'utilisez que ce dont l'édition a besoin.
+Les blocs sont insérés dans la section **« Les blocs dynamiques »** de la lettre (après le bloc 01 par défaut), dans l'ordre affiché — et cette section se déplace comme les autres depuis le panneau **↕**. Un bloc laissé vide n'apparaît pas dans l'e-mail : vous n'utilisez que ce dont l'édition a besoin.
 
 ## Les ambiances de couleur (panneau 08)
 
