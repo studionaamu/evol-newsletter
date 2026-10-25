@@ -57,10 +57,11 @@ Certaines éditions demandent d'annoncer un événement, lister des dates ou cé
 - **+ Win (photo / vidéo)** — un encadré doux pour célébrer une réussite, avec photo ou vidéo.
 - **+ Paragraphe** — du texte libre, avec photo ou vidéo si besoin.
 
-Chaque bloc se déplace (↑ ↓), se déplie en cliquant sur son en-tête et se supprime (✕). Tout est enregistré automatiquement.
+Chaque bloc se déplace (↑ ↓), se déplie en cliquant sur son en-tête et se supprime (✕). Pour réordonner à la souris ou au doigt, **attrapez la poignée ⠿** à gauche de l'en-tête et glissez le bloc à la place voulue : l'aperçu se remet à jour au lâcher. Tout est enregistré automatiquement.
 
 **Photos et vidéos** :
-- **Photo** : collez l'adresse (URL) d'une image en ligne (voir §2 pour l'héberger).
+- **Photo depuis votre ordinateur** : dans un bloc, cliquez **Choisir une image…** et sélectionnez un fichier. L'outil la redimensionne et la compresse automatiquement (les gros fichiers ne saturent donc pas la sauvegarde). **Retirer le média** efface la photo du bloc. Le même bouton existe pour la photo d'en-tête (panneau 01) et le logo.
+- **Photo en ligne** : collez plutôt l'adresse (URL) d'une image hébergée (voir §2) — c'est la solution la plus sûre pour un envoi réel.
 - **Vidéo YouTube / Vimeo** : collez simplement le lien de la vidéo — les e-mails ne peuvent pas lire de vidéo directement, donc l'outil insère automatiquement **la miniature de la vidéo avec un bouton de lecture** : le destinataire clique et la vidéo s'ouvre.
 
 Les blocs sont insérés dans la lettre **après le bloc 01**, dans l'ordre affiché. Un bloc laissé vide n'apparaît pas dans l'e-mail : vous n'utilisez que ce dont l'édition a besoin.
@@ -81,6 +82,7 @@ Sur les thèmes clairs (Ivoire, Craie, personnalisé clair), le texte au-dessus 
 |---|---|
 | Plan gratuit Brevo | 300 e-mails / jour |
 | Recommandé | ~100 contacts = aucun problème |
-| Photos importées | stockées dans le navigateur (évitez les fichiers > 5 Mo) |
+| Photos importées | redimensionnées automatiquement, stockées dans le navigateur |
+| Images importées et Gmail | images « embarquées » souvent bloquées par Gmail / Outlook : pour un envoi, préférez une adresse hébergée |
 
 En cas de doute : faites d'abord **Envoyer un test**, toujours.

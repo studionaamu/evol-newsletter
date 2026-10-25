@@ -238,6 +238,33 @@ input[type="color"] { padding: 4px; height: 42px; cursor: pointer; }
 .block-card.open .block-card-body { display: block; }
 .block-card.open .b-toggle { transform: rotate(180deg); }
 .block-toolbar { display: flex; gap: 6px; }
+.drag-handle {
+  color: var(--dim);
+  cursor: grab;
+  font-size: 13px;
+  line-height: 1;
+  letter-spacing: 1px;
+  touch-action: none;
+  padding: 0 2px;
+}
+.drag-handle:active { cursor: grabbing; }
+.block-card.dragging { opacity: .45; border-color: var(--muted); }
+.block-card.dragging .block-card-head { background: var(--bg-2); }
+.media-box { margin-top: 8px; }
+.media-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.media-thumb {
+  display: none;
+  width: 100%;
+  height: 110px;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--bg-3);
+  margin-top: 8px;
+}
+.media-thumb.on { display: block; }
+.media-box .field-hint { margin-top: 8px; }
+.is-hidden { display: none !important; }
 .icon-btn {
   background: transparent;
   border: 1px solid var(--line);
@@ -705,7 +732,7 @@ textarea { min-height: 44px; }
             <button type="button" class="btn btn-ghost btn-sm" data-add-block="win">+ Win (photo / vidéo)</button>
             <button type="button" class="btn btn-ghost btn-sm" data-add-block="text">+ Paragraphe</button>
           </div>
-          <span class="field-hint">Chaque bloc apparaît dans la lettre après le bloc 01, dans l’ordre affiché ici. Laissez vide ce dont vous n’avez pas besoin.</span>
+          <span class="field-hint">Chaque bloc apparaît dans la lettre après le bloc 01, dans l’ordre affiché ici. <b>Glissez la poignée ⠿</b> pour déplacer un bloc (ou utilisez ↑ ↓). Laissez vide ce dont vous n’avez pas besoin.</span>
         </div>
         <div id="blocksList"></div>
       </div>
@@ -1548,12 +1575,40 @@ textarea { min-height: 44px; }
   }
 
   /* ---------------- Images importées ---------------- */
-  function readImageFile(file, cb) {
+  function readImageFile(file, cb, maxWidth) {
     if (!file || !/^image\//.test(file.type)) { toast('Choisissez un fichier image (PNG, JPG…).', true); return; }
-    var reader = new FileReader();
-    reader.onload = function () { cb(String(reader.result)); };
-    reader.onerror = function () { toast('Impossible de lire ce fichier.', true); };
-    reader.readAsDataURL(file);
+    /* GIF animés et SVG : on garde le fichier tel quel (un redimensionnement les abîmerait) */
+    if (/^image\/(gif|svg)/i.test(file.type)) {
+      var raw = new FileReader();
+      raw.onload = function () { cb(String(raw.result)); };
+      raw.onerror = function () { toast('Impossible de lire ce fichier.', true); };
+      raw.readAsDataURL(file);
+      return;
+    }
+    var src = URL.createObjectURL(file);
+    var img = new Image();
+    img.onload = function () {
+      var max = maxWidth || 1200;
+      var w0 = img.naturalWidth || img.width || max;
+      var h0 = img.naturalHeight || img.height || max;
+      var scale = Math.min(1, max / w0);
+      var w = Math.max(1, Math.round(w0 * scale));
+      var h = Math.max(1, Math.round(h0 * scale));
+      var canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      var ctx = canvas.getContext('2d');
+      if (!ctx) { URL.revokeObjectURL(src); toast('Impossible de préparer cette image.', true); return; }
+      ctx.drawImage(img, 0, 0, w, h);
+      var isPng = /png/i.test(file.type);
+      var dataUrl = null;
+      try { dataUrl = canvas.toDataURL(isPng ? 'image/png' : 'image/jpeg', 0.85); } catch (e) { dataUrl = null; }
+      URL.revokeObjectURL(src);
+      if (!dataUrl) { toast('Cette image n’a pas pu être préparée.', true); return; }
+      cb(dataUrl);
+    };
+    img.onerror = function () { URL.revokeObjectURL(src); toast('Impossible de lire ce fichier image.', true); };
+    img.src = src;
   }
 
   function bindImages() {
@@ -1565,8 +1620,8 @@ textarea { min-height: 44px; }
         $('#heroThumb').style.backgroundImage = 'url("' + dataUrl.replace(/"/g, '&quot;') + '")';
         renderPreview();
         saveState();
-        toast('Photo importée. Pour l’envoi, utilisez « Exporter l’e-mail » ou hébergez l’image (voir aide).');
-      });
+        toast('Photo importée et optimisée.');
+      }, 1600);
     });
     $('#heroImageReset').addEventListener('click', function () {
       heroImageDataUrl = null;
@@ -1581,7 +1636,7 @@ textarea { min-height: 44px; }
         logoDataUrl = dataUrl;
         renderPreview();
         saveState();
-      });
+      }, 400);
     });
     $('#logoReset').addEventListener('click', function () {
       logoDataUrl = null;
@@ -1637,6 +1692,10 @@ textarea { min-height: 44px; }
   function renderBlocks() {
     var wrap = $('#blocksList');
     var blocks = currentBlocks();
+    /* On garde ouverts les blocs qui l'étaient avant le rendu (déplacement, ajout…) */
+    var openBlocks = Array.prototype.map.call(wrap.querySelectorAll('.block-card.open'), function (c) {
+      return blocks[parseInt(c.getAttribute('data-idx'), 10)];
+    }).filter(Boolean);
     wrap.innerHTML = '';
     if (!blocks.length) {
       var empty = document.createElement('div');
@@ -1648,9 +1707,11 @@ textarea { min-height: 44px; }
     blocks.forEach(function (b, i) {
       var meta = BLOCK_META[b.type] || BLOCK_META.text;
       var card = document.createElement('div');
-      card.className = 'block-card';
+      card.className = 'block-card' + (openBlocks.indexOf(b) !== -1 ? ' open' : '');
+      card.setAttribute('data-idx', String(i));
       card.innerHTML =
         '<div class="block-card-head">' +
+        '<span class="drag-handle" title="Glisser pour déplacer ce bloc">⠿</span>' +
         '<span class="b-type">' + meta.label + '</span>' +
         '<span class="b-hint">' + (nonEmptyStr(b.title) ? escH(b.title) : meta.hint) + '</span>' +
         '<span class="block-toolbar">' +
@@ -1662,7 +1723,7 @@ textarea { min-height: 44px; }
         '</div>' +
         '<div class="block-card-body"></div>';
       card.querySelector('.block-card-head').addEventListener('click', function (e) {
-        if (e.target.closest('.icon-btn')) return;
+        if (e.target.closest('.icon-btn, .drag-handle')) return;
         card.classList.toggle('open');
       });
       card.querySelector('[data-act="up"]').addEventListener('click', function () { moveBlock(i, -1); });
@@ -1704,6 +1765,10 @@ textarea { min-height: 44px; }
           input.type = 'text';
           input.value = b[f.key] || '';
           if (f.ph) input.placeholder = f.ph;
+          if (f.key === 'mediaUrl' && /^data:/.test(input.value)) {
+            input.value = '';
+            input.placeholder = 'Image importée depuis l’ordinateur';
+          }
         }
         input.addEventListener('input', function () {
           b[f.key] = (f.type === 'textarea') ? this.value.split('\n') : this.value;
@@ -1713,9 +1778,143 @@ textarea { min-height: 44px; }
         });
         label.appendChild(input);
         body.appendChild(label);
+        if (f.key === 'mediaUrl') {
+          var mediaBox = buildMediaControls(b, input);
+          input.addEventListener('input', mediaBox.sync);
+          body.appendChild(mediaBox);
+        }
       });
 
       wrap.appendChild(card);
+    });
+  }
+
+  /* Média d'un bloc : lien, vidéo, ou image choisie sur l'ordinateur */
+  function buildMediaControls(b, urlInput) {
+    var box = document.createElement('div');
+    box.className = 'media-box';
+
+    var row = document.createElement('div');
+    row.className = 'media-tools';
+
+    var pick = document.createElement('button');
+    pick.type = 'button';
+    pick.className = 'btn btn-ghost btn-sm';
+    pick.textContent = 'Choisir une image…';
+
+    var file = document.createElement('input');
+    file.type = 'file';
+    file.accept = 'image/*';
+    file.hidden = true;
+
+    var clear = document.createElement('button');
+    clear.type = 'button';
+    clear.className = 'btn btn-ghost btn-sm';
+    clear.textContent = 'Retirer le média';
+
+    var thumb = document.createElement('img');
+    thumb.className = 'media-thumb';
+    thumb.alt = '';
+    thumb.onerror = function () { thumb.classList.remove('on'); };
+
+    var hint = document.createElement('span');
+    hint.className = 'field-hint';
+    hint.textContent = 'Photo copiée dans l’e-mail. Gmail et Outlook bloquent souvent les images intégrées : pour un envoi, une adresse hébergée reste plus sûre.';
+
+    function sync() {
+      var url = nonEmptyStr(b.mediaUrl) ? String(b.mediaUrl).trim() : '';
+      var isVideo = /youtu\.?be|vimeo/i.test(url);
+      var isLocal = /^data:/i.test(url);
+      thumb.classList.toggle('on', !!url && !isVideo);
+      if (url && !isVideo) thumb.src = url;
+      clear.classList.toggle('is-hidden', !url);
+      hint.classList.toggle('is-hidden', !isLocal);
+    }
+
+    pick.addEventListener('click', function () { file.click(); });
+    file.addEventListener('change', function () {
+      var f = this.files[0];
+      this.value = '';
+      readImageFile(f, function (dataUrl) {
+        b.mediaUrl = dataUrl;
+        urlInput.value = '';
+        urlInput.placeholder = 'Image importée depuis l’ordinateur';
+        sync();
+        renderPreviewDebounced();
+      }, 1000);
+    });
+    clear.addEventListener('click', function () {
+      b.mediaUrl = '';
+      urlInput.value = '';
+      urlInput.placeholder = 'https://…';
+      sync();
+      renderPreviewDebounced();
+    });
+
+    row.appendChild(pick);
+    row.appendChild(file);
+    row.appendChild(clear);
+    box.appendChild(row);
+    box.appendChild(thumb);
+    box.appendChild(hint);
+    box.sync = sync;
+    sync();
+    return box;
+  }
+
+  /* Déplacement des blocs par glisser-déposer (souris et tactile) */
+  function bindBlockDrag() {
+    var wrap = $('#blocksList');
+    var dragCard = null;
+    var snapshot = null;
+
+    wrap.addEventListener('pointerdown', function (e) {
+      var handle = e.target.closest('.drag-handle');
+      if (!handle || !wrap.contains(handle)) return;
+      var card = handle.closest('.block-card');
+      if (!card) return;
+      e.preventDefault();
+      dragCard = card;
+      snapshot = currentBlocks().slice();
+      card.classList.add('dragging');
+      try { handle.setPointerCapture(e.pointerId); } catch (err) { /* pas de capture : le glisser reste possible */ }
+
+      function place(ev) {
+        var cards = Array.prototype.slice.call(wrap.querySelectorAll('.block-card'));
+        var after = null;
+        cards.forEach(function (c) {
+          if (c === dragCard) return;
+          var r = c.getBoundingClientRect();
+          if (ev.clientY > r.top + r.height / 2) after = c;
+        });
+        if (after) {
+          if (after.nextElementSibling !== dragCard) wrap.insertBefore(dragCard, after.nextElementSibling);
+        } else if (wrap.firstElementChild !== dragCard) {
+          wrap.insertBefore(dragCard, wrap.firstElementChild);
+        }
+      }
+
+      function finish() {
+        handle.removeEventListener('pointermove', place);
+        handle.removeEventListener('pointerup', finish);
+        handle.removeEventListener('pointercancel', finish);
+        if (dragCard) dragCard.classList.remove('dragging');
+        dragCard = null;
+        var order = Array.prototype.slice.call(wrap.querySelectorAll('.block-card')).map(function (c) {
+          return parseInt(c.getAttribute('data-idx'), 10);
+        });
+        var changed = order.some(function (v, i) { return v !== i; });
+        if (!changed || !snapshot) { snapshot = null; return; }
+        state.blocks = order.map(function (idx) { return snapshot[idx]; });
+        snapshot = null;
+        renderBlocks();
+        renderPreview();
+        saveState();
+      }
+
+      handle.addEventListener('pointermove', place);
+      handle.addEventListener('pointerup', finish);
+      handle.addEventListener('pointercancel', finish);
     });
   }
 
@@ -1723,6 +1922,7 @@ textarea { min-height: 44px; }
     $$('[data-add-block]').forEach(function (btn) {
       btn.addEventListener('click', function () { addBlock(this.getAttribute('data-add-block')); });
     });
+    bindBlockDrag();
     renderBlocks();
   }
 
